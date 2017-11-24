@@ -1,14 +1,7 @@
 module Noise
   module Functions
     module Cipher
-      def self.encrypt(k, n, ad, plaintext)
-      end
-
-      def self.decrypt(k, n, ad, ciphertext)
-      end
-
-      def rekey(k)
-      end
+      autoload :ChaChaPoly, 'noise/functions/cipher/cha_cha_poly'
     end
   end
 end

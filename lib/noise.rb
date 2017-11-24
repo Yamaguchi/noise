@@ -1,5 +1,6 @@
 require "noise/version"
+require 'rbnacl'
 
 module Noise
-  # Your code goes here...
+  autoload :Functions, 'noise/functions'
 end
