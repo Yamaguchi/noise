@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Noise
   module State
     # A CipherState can encrypt and decrypt data based on its k and n variables:
@@ -27,7 +29,7 @@ module Noise
 
       def encrypt_with_ad(ad, plaintext)
         return plaintext unless key?
-        raise MaxNonceError if @n == MAX_NONCE
+        raise Noise::Exceptions::MaxNonceError if @n == MAX_NONCE
         ciphertext = @cipher.encrypt(@k, @n, ad, plaintext)
         @n += 1
         ciphertext
@@ -35,7 +37,7 @@ module Noise
 
       def decrypt_with_ad(ad, ciphertext)
         return ciphertext unless key?
-        raise MaxNonceError if @n == MAX_NONCE
+        raise Noise::Exceptions::MaxNonceError if @n == MAX_NONCE
         plaintext = @cipher.decrypt(@k, @n, ad, ciphertext)
         @n += 1
         plaintext

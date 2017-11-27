@@ -6,5 +6,6 @@ require 'rbnacl'
 require 'securerandom'
 
 module Noise
+  autoload :Exceptions, 'noise/exceptions'
   autoload :Functions, 'noise/functions'
 end
