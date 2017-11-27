@@ -1,12 +1,9 @@
+# frozen_string_literal: true
+
 module Noise
   module Functions
     module DH
-      DHLEN = 32
-      def self.generate_keypair
-      end
-
-      def self.dh(key_pair, public_key)
-      end
+      autoload :Secp256k1, 'noise/functions/dh/secp256k1'
     end
   end
 end
