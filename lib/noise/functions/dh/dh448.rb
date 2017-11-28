@@ -1,12 +1,18 @@
 module Noise
   module Functions
     module DH
-      module DH448
+      class DH448
         DHLEN = 56
-        def self.generate_keypair
+        def generate_keypair
+          throw NotImplementedError
         end
 
-        def self.dh(key_pair, public_key)
+        def dh(key_pair, public_key)
+          throw NotImplementedError
+        end
+
+        def dhlen
+          DHLEN
         end
       end
     end

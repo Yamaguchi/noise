@@ -3,7 +3,7 @@
 module Noise
   module Functions
     module Hash
-      module Blake2b
+      class Blake2b
         HASHLEN = 64
         BLOCKLEN = 128
         def hash(data)

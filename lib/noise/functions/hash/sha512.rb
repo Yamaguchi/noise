@@ -3,7 +3,7 @@
 module Noise
   module Functions
     module Hash
-      module Sha512
+      class Sha512
         HASHLEN = 64
         BLOCKLEN = 128
         def hash(data)

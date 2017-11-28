@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Noise
   module State
     # A SymmetricState object contains a CipherState plus the following variables:
@@ -7,7 +9,7 @@ module Noise
     #
     class SymmetricState
       def initialize_symmetric(protocol_name: 'Noise')
-        @protocol = ProtocolFactory.create(protocol_name)
+        @protocol = Protocol.create(protocol_name)
         @ck = @h =
                 if protocol_name.length <= @protocol.hash_fn.hashlen
                   protocol_name.ljust(@protocol.hash_fn.hashlen, "\x00")

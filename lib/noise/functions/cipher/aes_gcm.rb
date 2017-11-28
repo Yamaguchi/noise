@@ -1,11 +1,13 @@
 module Noise
   module Functions
     module Cipher
-      module AesGcm
-        def self.encrypt(k, n, ad, plaintext)
+      class AesGcm
+        def encrypt(k, n, ad, plaintext)
+          throw NotImplementedError
         end
 
-        def self.decrypt(k, n, ad, ciphertext)
+        def decrypt(k, n, ad, ciphertext)
+          throw NotImplementedError
         end
       end
     end
