@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Noise
   module Functions
     module Cipher

@@ -1,4 +1,6 @@
-require "noise/version"
+# frozen_string_literal: true
+
+require 'noise/version'
 require 'rbnacl'
 
 require 'ecdsa'
@@ -11,4 +13,5 @@ module Noise
   autoload :Protocol, 'noise/protocol'
   autoload :Exceptions, 'noise/exceptions'
   autoload :Functions, 'noise/functions'
+  autoload :State, 'noise/state'
 end
