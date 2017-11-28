@@ -18,5 +18,9 @@ RSpec.describe Noise::Protocol do
       it { expect(subject.dh_fn).to be_a Noise::Functions::DH::DH25519 }
       it { expect(subject.hash_fn).to be_a Noise::Functions::Hash::Sha256 }
     end
+    context 'Invalie_Protocol_Name' do
+      let(:name) { 'Invalie_Protocol_Name' }
+      it { expect { subject }.to raise_error Noise::Exceptions::ProtocolNameError }
+    end
   end
 end
