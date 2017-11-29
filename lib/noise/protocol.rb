@@ -29,6 +29,7 @@ module Noise
       @cipher_fn = CIPHER[cipher_name]&.new
       @hash_fn = HASH[hash_name]&.new
       @dh_fn = DH[dh_name]&.new
+      @hkdf_fn = Noise::Functions::Hash.create_hkdf_fn(hash_name)
       raise Noise::Exceptions::ProtocolNameError unless @cipher_fn && @hash_fn && @dh_fn
     end
   end
