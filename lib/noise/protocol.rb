@@ -15,7 +15,6 @@ module Noise
     }.stringify_keys.freeze
 
     HASH = {
-      'BLAKE2b': Noise::Functions::Hash::Blake2b,
       'SHA256': Noise::Functions::Hash::Sha256,
       'SHA512': Noise::Functions::Hash::Sha512
     }.stringify_keys.freeze
@@ -27,9 +26,10 @@ module Noise
     end
 
     def initialize(pattern_name, cipher_name, hash_name, dh_name)
-      @cipher_fn = CIPHER[cipher_name].new
-      @hash_fn = HASH[hash_name].new
-      @dh_fn = DH[dh_name].new
+      @cipher_fn = CIPHER[cipher_name]&.new
+      @hash_fn = HASH[hash_name]&.new
+      @dh_fn = DH[dh_name]&.new
+      raise Noise::Exceptions::ProtocolNameError unless @cipher_fn && @hash_fn && @dh_fn
     end
   end
 end
