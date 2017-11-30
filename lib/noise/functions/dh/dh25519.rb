@@ -4,11 +4,13 @@ module Noise
       class DH25519
         DHLEN = 32
         def generate_keypair
-          throw NotImplementedError
+          private_key = RbNaCl::Signatures::Ed25519::SigningKey.generate
+          public_key = private_key.verify_key.to_bytes
+          [private_key.to_bytes, public_key]
         end
 
-        def dh(key_pair, public_key)
-          throw NotImplementedError
+        def dh(private_key, public_key)
+          RbNaCl::GroupElement.new(public_key).mult(private_key)
         end
 
         def dhlen
