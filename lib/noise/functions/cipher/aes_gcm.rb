@@ -11,6 +11,10 @@ module Noise
         def decrypt(k, n, ad, ciphertext)
           throw NotImplementedError
         end
+
+        def nonce_to_bytes(n)
+          "\00" * 4 + sprintf('%16x', n).htb
+        end
       end
     end
   end

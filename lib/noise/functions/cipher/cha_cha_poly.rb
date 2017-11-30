@@ -6,12 +6,16 @@ module Noise
       class ChaChaPoly
         def encrypt(k, n, ad, plaintext)
           @cipher = RbNaCl::AEAD::ChaCha20Poly1305IETF.new(String.new(k).force_encoding('ASCII-8BIT'))
-          @cipher.encrypt(n, plaintext, ad)
+          @cipher.encrypt(nonce_to_bytes(n), plaintext, ad)
         end
 
         def decrypt(k, n, ad, ciphertext)
           @cipher = RbNaCl::AEAD::ChaCha20Poly1305IETF.new(String.new(k).force_encoding('ASCII-8BIT'))
-          @cipher.decrypt(n, ciphertext, ad)
+          @cipher.decrypt(nonce_to_bytes(n), ciphertext, ad)
+        end
+
+        def nonce_to_bytes(n)
+          "\00" * 4 + sprintf('%16x', n).htb.reverse
         end
       end
     end
