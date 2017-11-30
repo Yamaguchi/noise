@@ -2,7 +2,7 @@
 
 module Noise
   class Protocol
-    attr_accessor :cipher_fn, :hash_fn, :dh_fn
+    attr_accessor :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn
 
     CIPHER = {
       'AESGCM': Noise::Functions::Cipher::AesGcm,

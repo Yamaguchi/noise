@@ -8,6 +8,8 @@ module Noise
     # - h: A hash output of HASHLEN bytes.
     #
     class SymmetricState
+      attr_reader :h, :ck
+
       def initialize_symmetric(protocol_name: 'Noise')
         @protocol = Protocol.create(protocol_name)
         @ck = @h =
@@ -17,18 +19,18 @@ module Noise
                   @protocol.hash_fn.hash(protocol_name)
                 end
 
-        @cipher_state = CipherState(@protocol.cipher_fn)
+        @cipher_state = CipherState.new(cipher: @protocol.cipher_fn)
         @cipher_state.initialize_key(nil)
       end
 
       def mix_key(input_key_meterial)
-        @ck, temp_k = @protocol.hkdf(@ck, input_key_meterial, 2)
+        @ck, temp_k = @protocol.hkdf_fn.call(@ck, input_key_meterial, 2)
         temp_k = truncate(temp_k)
         @cipher_state.initialize_key(temp_k)
       end
 
       def mix_hash(data)
-        @h = @protocol.hash_fn.hash(h + data)
+        @h = @protocol.hash_fn.hash(@h + data)
       end
 
       def mix_key_and_hash(input_key_meterial)
