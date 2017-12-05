@@ -34,9 +34,6 @@ RSpec.describe "Vectors" do
 
       context "test-vector #{v[:protocol_name]}" do
         it do
-          puts "","",""
-          puts "test vector-------------------------------"
-          puts v[:protocol_name]
           initiator = Noise::Connection.new(v[:protocol_name])
           responder = Noise::Connection.new(v[:protocol_name])
           if v.key?(:init_psks) && v.key?(:resp_psks)
@@ -62,7 +59,6 @@ RSpec.describe "Vectors" do
           i = 0
           for message in v[:messages]
             i += 1
-            puts "message-#{i}-#{initiator_to_responder}"
             if handshake_finished
               one_way_or_initiator = initiator.protocol.pattern.one_way || initiator_to_responder
               sender = one_way_or_initiator ? initiator : responder
@@ -71,21 +67,15 @@ RSpec.describe "Vectors" do
               ciphertext = sender.encrypt(message[:payload].htb)
               expect(ciphertext.bth).to eq message[:ciphertext]
               plaintext = receiver.decrypt(message[:ciphertext].htb)
-              puts "  ciphertext=#{ciphertext.bth}"
-              puts "  payload=#{plaintext.bth}"
               expect(plaintext.bth).to eq message[:payload]
 
             else
               sender = initiator_to_responder ? initiator : responder
               receiver = initiator_to_responder ? responder : initiator
-              puts "sender.initiator=#{sender.protocol.initiator}"
-              puts "receiver.initiator=#{receiver.protocol.initiator}"
               ciphertext = sender.write_message(message[:payload].htb)
               expect(ciphertext.bth).to eq message[:ciphertext]
 
               plaintext = receiver.read_message(message[:ciphertext].htb)
-              puts "  ciphertext=#{ciphertext.bth}"
-              puts "  payload=#{plaintext.bth}"
               expect(plaintext.bth).to eq message[:payload]
               if sender.handshake_finished && receiver.handshake_finished
                 handshake_finished = true

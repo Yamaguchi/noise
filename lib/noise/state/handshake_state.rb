@@ -19,7 +19,6 @@ module Noise
         @protocol = protocol
         @symmetric_state = SymmetricState.new
         @symmetric_state.initialize_symmetric(@protocol)
-        puts "prologue=#{prologue}"
         @symmetric_state.mix_hash(prologue)
         @initiator = initiator
         @s = [s].flatten
@@ -55,19 +54,10 @@ module Noise
       end
 
       def write_message(payload, message_buffer)
-        puts "HandshakeState#write_message---------"
-        puts "patterns=#{@message_patterns}"
-        puts "    payload=#{payload}"
         pattern = @message_patterns.shift
-        puts "    pattern=#{pattern}"
         dh_fn = @protocol.dh_fn
-        puts "   s:#{@s.inspect}"
-        puts "   e:#{@e.inspect}"
-        puts "   rs:#{@rs.inspect}"
-        puts "   re:#{@re.inspect}"
 
         pattern.each do |token|
-          puts "    token=#{token}"
           case token
           when 'e'
             @e = dh_fn.generate_keypair if @e.compact.empty?
@@ -99,19 +89,15 @@ module Noise
             next
           end
         end
-        puts "    call encrypt_and_hash"
         message_buffer << @symmetric_state.encrypt_and_hash(payload)
-        puts "    message_buffer=#{message_buffer.bth}"
         @symmetric_state.split if @message_patterns.empty?
       end
 
       def read_message(message, payload_buffer)
-        puts "HandshakeState#read_message------------------"
         pattern = @message_patterns.shift
         dh_fn = @protocol.dh_fn
         len = dh_fn.dhlen
         pattern.each do |token|
-          puts "    token=#{token}"
           case token
           when 'e'
             @re = @protocol.dh_fn.class.from_public(message[0...len]) if @re.compact.empty?
@@ -148,7 +134,6 @@ module Noise
           end
         end
         payload_buffer << @symmetric_state.decrypt_and_hash(message)
-        puts "    payload_buffer=#{payload_buffer.bth}"
         @symmetric_state.split if @message_patterns.empty?
       end
     end

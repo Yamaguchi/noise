@@ -41,18 +41,11 @@ module Noise
     end
 
     def set_keypair_from_private(keypair, private_key)
-      puts "set_keypair_from_private"
-      puts "#{keypair}/#{private_key.bth}"
       @protocol.keypairs[keypair.to_sym] = @protocol.dh_fn.class.from_private(private_key)
-      puts @protocol.keypairs[keypair.to_sym][0].bth
-      puts @protocol.keypairs[keypair.to_sym][1].bth
     end
 
     def set_keypair_from_public(keypair, public_key)
-      puts "set_keypair_from_public"
-      puts "#{keypair}/#{public_key.bth}"
       @protocol.keypairs[keypair.to_sym] = @protocol.dh_fn.class.from_public(public_key)
-      puts @protocol.keypairs[keypair.to_sym]
     end
 
     def start_handshake
@@ -62,8 +55,6 @@ module Noise
     end
 
     def write_message(payload = '')
-      puts "Connection#write_message---------------"
-      puts "payload=#{payload.bth}"
       # Call NoiseConnection.start_handshake first
       raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
       raise Noise::Exceptions::NoiseHandshakeError if @fn != @write_message_proc
@@ -77,8 +68,6 @@ module Noise
     end
 
     def read_message(data)
-      puts "Connection#read_message---------------"
-      puts "data=#{data.bth}"
       # Call NoiseConnection.start_handshake first
       raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
       raise Noise::Exceptions::NoiseHandshakeError if @fn != @read_message_proc
@@ -100,7 +89,7 @@ module Noise
 
     def decrypt(data)
       raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
-      # raise Noise::Exceptions::NoiseInvalidMessage 
+      # raise Noise::Exceptions::NoiseInvalidMessage
       @protocol.cipher_state_decrypt.decrypt_with_ad('', data)
     end
   end
