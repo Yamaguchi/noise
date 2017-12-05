@@ -10,11 +10,16 @@ module Noise
     #
     class CipherState
       MAX_NONCE = 2**64 - 1
+
+      attr_reader :k, :n
+
       def initialize(cipher: AesGcm.new)
         @cipher = cipher
       end
 
       def initialize_key(key)
+        # puts "    initialize_key---------------------------"
+        # puts "    key=#{key&.bth}"
         @k = key
         @n = 0
       end
@@ -28,6 +33,10 @@ module Noise
       end
 
       def encrypt_with_ad(ad, plaintext)
+        # puts "CipherState#encrypt_with_ad------------------"
+        # puts "          k=#{@k}"
+        # puts "          n=#{@n}"
+        # puts "         ad=#{ad}"
         return plaintext unless key?
         raise Noise::Exceptions::MaxNonceError if @n == MAX_NONCE
         ciphertext = @cipher.encrypt(@k, @n, ad, plaintext)
@@ -36,6 +45,10 @@ module Noise
       end
 
       def decrypt_with_ad(ad, ciphertext)
+        # puts "CipherState#decrypt_with_ad------------------"
+        # puts "          k=#{@k}"
+        # puts "          n=#{@n}"
+        # puts "         ad=#{ad}"
         return ciphertext unless key?
         raise Noise::Exceptions::MaxNonceError if @n == MAX_NONCE
         plaintext = @cipher.decrypt(@k, @n, ad, ciphertext)
@@ -44,6 +57,7 @@ module Noise
       end
 
       def rekey
+        # puts "CipherState#rekey------------------"
         @k = @cipher.rekey(@k)
       end
     end

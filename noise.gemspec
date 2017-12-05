@@ -25,4 +25,5 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency 'ecdsa'
   spec.add_runtime_dependency 'rbnacl'
+  spec.add_runtime_dependency 'rb-pure25519'
 end

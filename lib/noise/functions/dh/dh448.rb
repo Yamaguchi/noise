@@ -14,6 +14,11 @@ module Noise
         def dhlen
           DHLEN
         end
+
+        def self.from_private(private_key)
+        end
+        def self.from_public(private_key)
+        end
       end
     end
   end

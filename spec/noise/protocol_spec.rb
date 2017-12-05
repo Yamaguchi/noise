@@ -22,13 +22,5 @@ RSpec.describe Noise::Protocol do
       let(:name) { 'Invalie_Protocol_Prefix' }
       it { expect { subject }.to raise_error Noise::Exceptions::ProtocolNameError }
     end
-    context 'BLAKE2s is not supported' do
-      let(:name) { 'Noise_KN_25519_AESGCM_BLAKE2s' }
-      it { expect { subject }.to raise_error Noise::Exceptions::ProtocolNameError }
-    end
-    context 'BLAKE2b is not supported' do
-      let(:name) { 'Noise_KN_25519_AESGCM_BLAKE2b' }
-      it { expect { subject }.to raise_error Noise::Exceptions::ProtocolNameError }
-    end
   end
 end
