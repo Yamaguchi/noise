@@ -22,28 +22,34 @@ module Noise
         puts "prologue=#{prologue}"
         @symmetric_state.mix_hash(prologue)
         @initiator = initiator
-        @s = s
-        @e = e
-        @rs = rs
-        @re = re
+        @s = [s].flatten
+        @e = [e].flatten
+        @rs = [rs].flatten
+        @re = [re].flatten
 
         # TODO : Calls MixHash() once for each public key listed in the pre-messages from  handshake_pattern, with the
         # specified public key as input (see Section 7 for an explanation of pre-messages). If both initiator and
         # responder have pre-messages, the initiator's public keys are hashed first.
-        # if initiator
-        #   @_get_local_keypair
-        #   @symmetric_state.mix_hash()
-        # else
-        #   public_key =
-        #   @symmetric_state.mix_hash(public_key)
-        # end
-        # initiator_keypair_getter = instance._get_local_keypair if initiator else instance._get_remote_keypair
-        # responder_keypair_getter = instance._get_remote_keypair if initiator else instance._get_local_keypair
-        # for keypair in map(initiator_keypair_getter, noise_protocol.pattern.get_initiator_pre_messages())
-        #     instance.symmetric_state.mix_hash(keypair.public_bytes)
-        # for keypair in map(responder_keypair_getter, noise_protocol.pattern.get_responder_pre_messages())
-        #     instance.symmetric_state.mix_hash(keypair.public_bytes)
+        get_local_keypair = ->(token) { instance_variable_get('@' + token) }
+        get_remote_keypair = ->(token) { instance_variable_get('@r' + token) }
 
+        if initiator
+          initiator_keypair_getter = get_local_keypair
+          responder_keypair_getter = get_remote_keypair
+        else
+          initiator_keypair_getter = get_remote_keypair
+          responder_keypair_getter = get_local_keypair
+        end
+
+        @protocol.pattern.initiator_pre_messages&.map do |message|
+          keypair = initiator_keypair_getter.call(message)
+          @symmetric_state.mix_hash(keypair[1])
+        end
+
+        @protocol.pattern.responder_pre_messages&.map do |message|
+          keypair = responder_keypair_getter.call(message)
+          @symmetric_state.mix_hash(keypair[1])
+        end
         # Sets message_patterns to the message patterns from handshake_pattern
         @message_patterns = @protocol.pattern.tokens.dup
       end
@@ -55,11 +61,16 @@ module Noise
         pattern = @message_patterns.shift
         puts "    pattern=#{pattern}"
         dh_fn = @protocol.dh_fn
+        puts "   s:#{@s.inspect}"
+        puts "   e:#{@e.inspect}"
+        puts "   rs:#{@rs.inspect}"
+        puts "   re:#{@re.inspect}"
+
         pattern.each do |token|
           puts "    token=#{token}"
           case token
           when 'e'
-            @e = dh_fn.generate_keypair if @e.nil?
+            @e = dh_fn.generate_keypair if @e.compact.empty?
             message_buffer << @e[1]
             @symmetric_state.mix_hash(@e[1])
             next
@@ -67,24 +78,24 @@ module Noise
             message_buffer << @symmetric_state.encrypt_and_hash(@s[1])
             next
           when 'ee'
-            @symmetric_state.mix_key(dh_fn.dh(@e[0], @re))
+            @symmetric_state.mix_key(dh_fn.dh(@e[0], @re[1]))
             next
           when 'es'
             if @initiator
-              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs))
+              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs[1]))
             else
-              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re))
+              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re[1]))
             end
             next
           when 'se'
             if @initiator
-              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re))
+              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re[1]))
             else
-              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs))
+              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs[1]))
             end
             next
           when 'ss'
-            @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs))
+            @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs[1]))
             next
           end
         end
@@ -103,36 +114,36 @@ module Noise
           puts "    token=#{token}"
           case token
           when 'e'
-            @re = @protocol.dh_fn.class.from_public(message[0...len])[1] if @re.nil?
+            @re = @protocol.dh_fn.class.from_public(message[0...len]) if @re.compact.empty?
             message = message[len..-1]
-            @symmetric_state.mix_hash(@re)
+            @symmetric_state.mix_hash(@re[1])
             next
           when 's'
             offset = @protocol.cipher_state_handshake.key? ? 16 : 0
             temp = message[0...len + offset]
             message = message[(len + offset)..-1]
-            @rs = @protocol.dh_fn.class.from_public(@symmetric_state.decrypt_and_hash(temp))[1]
+            @rs = @protocol.dh_fn.class.from_public(@symmetric_state.decrypt_and_hash(temp))
             # @protocol.keypair.load(@symmetric_state.decrypt_and_hash(temp))
             next
           when 'ee'
-            @symmetric_state.mix_key(dh_fn.dh(@e[0], @re))
+            @symmetric_state.mix_key(dh_fn.dh(@e[0], @re[1]))
             next
           when 'es'
             if @initiator
-              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs))
+              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs[1]))
             else
-              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re))
+              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re[1]))
             end
             next
           when 'se'
             if @initiator
-              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re))
+              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re[1]))
             else
-              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs))
+              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs[1]))
             end
             next
           when 'ss'
-            @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs))
+            @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs[1]))
             next
           end
         end
@@ -141,19 +152,5 @@ module Noise
         @symmetric_state.split if @message_patterns.empty?
       end
     end
-
-    # def _get_local_keypair(token:)
-    #   keypair = getattr(self, token)  # Maybe explicitly handle exception when getting improper keypair
-    #   if isinstance(keypair, Empty)
-    #     raise Exception('Required keypair {} is empty!'.format(token))  # Maybe subclassed exception
-    #   return keypair
-    # end
-    #
-    # def _get_remote_keypair(token)
-    #   keypair = getattr(self, 'r' + token)  # Maybe explicitly handle exception when getting improper keypair
-    #   if isinstance(keypair, Empty)
-    #     raise Exception('Required keypair {} is empty!'.format('r' + token))  # Maybe subclassed exception
-    #   return keypair
-    # end
   end
 end

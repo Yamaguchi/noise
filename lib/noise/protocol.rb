@@ -6,6 +6,8 @@ module Noise
     attr_reader :name, :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn, :pattern
     attr_reader :handshake_state, :keypairs, :keypair_fn
     attr_reader :handshake_hash
+    attr_accessor :cipher_state_handshake
+
     CIPHER = {
       'AESGCM': Noise::Functions::Cipher::AesGcm,
       'ChaChaPoly': Noise::Functions::Cipher::ChaChaPoly

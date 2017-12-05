@@ -10,7 +10,6 @@ module Noise
         end
 
         def dh(private_key, public_key)
-          puts public_key.bth, private_key.bth
           point = RbNaCl::GroupElement.new(public_key).mult(private_key)
           point.to_bytes
         end

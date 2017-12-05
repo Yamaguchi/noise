@@ -29,7 +29,8 @@ RSpec.describe "Vectors" do
       next if v[:protocol_name].include?("448")
       next if v[:protocol_name].include?("AES")
       next if v[:protocol_name].include?("psk")
-      next if v[:protocol_name] != 'Noise_NN_25519_ChaChaPoly_SHA256'
+      # next if v[:protocol_name] != 'Noise_NN_25519_ChaChaPoly_SHA256'
+      # next if v[:protocol_name] != 'Noise_IK_25519_ChaChaPoly_SHA256'
 
       context "test-vector #{v[:protocol_name]}" do
         it do
@@ -89,8 +90,8 @@ RSpec.describe "Vectors" do
               if sender.handshake_finished && receiver.handshake_finished
                 handshake_finished = true
                 if v.key?(:handshake_hash)
-                  expect(initiator.protocol.handshake_hash).to eq v['handshake_hash']
-                  expect(responder.protocol.handshake_hash).to eq v['handshake_hash']
+                  expect(initiator.protocol.handshake_hash.bth).to eq v[:handshake_hash]
+                  expect(responder.protocol.handshake_hash.bth).to eq v[:handshake_hash]
                 end
                 expect(initiator.protocol.cipher_state_encrypt.k).to eq responder.protocol.cipher_state_decrypt.k
 

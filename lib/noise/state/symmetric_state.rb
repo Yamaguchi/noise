@@ -23,40 +23,41 @@ module Noise
 
         @cipher_state = CipherState.new(cipher: @protocol.cipher_fn)
         @cipher_state.initialize_key(nil)
+        @protocol.cipher_state_handshake = @cipher_state
       end
 
       def mix_key(input_key_meterial)
-        # puts "    SymmetricState#mix_key(start)---------------------------"
-        # puts "        ck=#{@ck.bth}"
-        # puts "        input_key_meterial=#{input_key_meterial.bth}"
+        puts "    SymmetricState#mix_key(start)---------------------------"
+        puts "        ck=#{@ck.bth}"
+        puts "        input_key_meterial=#{input_key_meterial.bth}"
         @ck, temp_k = @protocol.hkdf_fn.call(@ck, input_key_meterial, 2)
         temp_k = truncate(temp_k)
         @cipher_state.initialize_key(temp_k)
-        # puts "    SymmetricState#mix_key(end)-----------------------------------"
+        puts "    SymmetricState#mix_key(end)-----------------------------------"
       end
 
       # data [String] binary string
       def mix_hash(data)
-        # puts "    SymmetricState#mix_hash(start)---------------------------"
-        # puts "        h=#{@h.bth}"
-        # puts "        data=#{data.bth}"
+        puts "        SymmetricState#mix_hash(start)---------------------------"
+        puts "            h=#{@h.bth}"
+        puts "            data=#{data.bth}"
         @h = @protocol.hash_fn.hash(@h + data)
-        # puts "        h=#{@h.bth}"
-        # puts "    SymmetricState#mix_hash(end)---------------------------"
+        puts "            h=#{@h.bth}"
+        puts "        SymmetricState#mix_hash(end)---------------------------"
       end
 
       def mix_key_and_hash(input_key_meterial)
-        # puts "SymmetricState#mix_key_and_hash(start)---------------------------"
-        # puts "    input_key_meterial=#{input_key_meterial.bth}"
-        # puts "    @ck=#{@ck.bth}"
+        puts "    SymmetricState#mix_key_and_hash(start)---------------------------"
+        puts "        input_key_meterial=#{input_key_meterial.bth}"
+        puts "        @ck=#{@ck.bth}"
         @ck, temp_h, temp_k = @protocol.hkdf_fn.call(@ck, input_key_meterial, 3)
-        # puts "    @ck=#{@ck.bth}"
-        # puts "    temp_h=#{temp_h.bth}"
-        # puts "    temp_k=#{temp_k.bth}"
+        puts "        @ck=#{@ck.bth}"
+        puts "        temp_h=#{temp_h.bth}"
+        puts "        temp_k=#{temp_k.bth}"
         mix_hash(temp_h)
         temp_k = truncate(temp_k)
         @cipher_state.initialize_key(temp_k)
-        # puts "SymmetricState#mix_key_and_hash(end)---------------------------"
+        puts "SymmetricState#mix_key_and_hash(end)---------------------------"
       end
 
       def handshake_hash
@@ -64,23 +65,23 @@ module Noise
       end
 
       def encrypt_and_hash(plaintext)
-        # puts "SymmetricState#encrypt_and_hash---------------------------"
-        # puts "        plaintext=#{plaintext.bth}"
-        # puts "        @h=#{@h.bth}"
+        puts "    SymmetricState#encrypt_and_hash---------------------------"
+        puts "        plaintext=#{plaintext.bth}"
+        puts "        @h=#{@h.bth}"
         ciphertext = @cipher_state.encrypt_with_ad(@h, plaintext)
-        # puts "        ciphertext=#{ciphertext.bth}"
+        puts "        ciphertext=#{ciphertext.bth}"
         mix_hash(ciphertext)
-        # puts "        ciphertext=#{ciphertext.bth}"
+        puts "        ciphertext=#{ciphertext.bth}"
         ciphertext
       end
 
       def decrypt_and_hash(ciphertext)
-        # puts "SymmetricState#decrypt_and_hash(start)---------------------------"
+        puts "    SymmetricState#decrypt_and_hash(start)---------------------------"
         plaintext = @cipher_state.decrypt_with_ad(@h, ciphertext)
-        # puts "  ciphertext=#{ciphertext}"
+        puts "        ciphertext=#{ciphertext}"
         mix_hash(ciphertext)
-        # puts "  ciphertext=#{ciphertext}"
-        # puts "SymmetricState#decrypt_and_hash(end)---------------------------"
+        puts "        ciphertext=#{ciphertext}"
+        puts "    SymmetricState#decrypt_and_hash(end)---------------------------"
         plaintext
       end
 
@@ -99,6 +100,7 @@ module Noise
           @protocol.cipher_state_encrypt = c2
           @protocol.cipher_state_decrypt = c1
         end
+        @protocol.handshake_done
         [c1, c2]
       end
 

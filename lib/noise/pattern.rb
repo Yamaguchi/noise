@@ -40,6 +40,14 @@ module Noise
       end
       required
     end
+
+    def initiator_pre_messages
+      @pre_messages[0].dup
+    end
+
+    def responder_pre_messages
+      @pre_messages[1].dup
+    end
   end
 
   class OneWayPattern < Pattern
