@@ -18,6 +18,13 @@ module Noise
           BLOCKLEN
         end
       end
+
+      class Blake2bHMAC < HMAC::Base
+        def initialize(key = nil)
+          super(RbNaCl::Hash::Blake2b, 128, 64, key)
+        end
+        public_class_method :new, :digest, :hexdigest
+      end
     end
   end
 end

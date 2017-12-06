@@ -30,7 +30,7 @@ RSpec.describe 'Vectors' do
 
   describe 'test_vectors' do
     vectors.each do |v|
-      next if v[:protocol_name].include?('BLAKE')
+      next if v[:protocol_name].include?('BLAKE2s')
       next if v[:protocol_name].include?('448')
       next if v[:protocol_name].include?('psk')
 

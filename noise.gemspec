@@ -26,4 +26,5 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'aead'
   spec.add_runtime_dependency 'ecdsa'
   spec.add_runtime_dependency 'rbnacl'
+  spec.add_runtime_dependency 'ruby-hmac'
 end

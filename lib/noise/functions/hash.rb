@@ -10,7 +10,11 @@ module Noise
 
       def self.hmac_hash(key, data, digest)
         # TODO: support for blake2b, blake2s
-        OpenSSL::HMAC.digest(OpenSSL::Digest.new(digest), key, data)
+        if digest.include?('SHA')
+          OpenSSL::HMAC.digest(OpenSSL::Digest.new(digest), key, data)
+        elsif digest.include?('BLAKE2b')
+          Noise::Functions::Hash::Blake2bHMAC.new(key).update(data).digest
+        end
       end
 
       def self.create_hkdf_fn(digest)
