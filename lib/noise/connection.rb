@@ -22,8 +22,8 @@ module Noise
       @handshake_started = false
       @handshake_finished = false
       @fn = nil
-      @write_message_proc = lambda {|payload| write_message(payload)}
-      @read_message_proc = lambda {|payload| read_message(payload)}
+      @write_message_proc = ->(payload) { write_message(payload) }
+      @read_message_proc = ->(payload) { read_message(payload) }
     end
 
     def prologue=(prologue)

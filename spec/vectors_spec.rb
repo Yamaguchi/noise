@@ -5,30 +5,35 @@ require 'spec_helper'
 require 'json'
 require 'pp'
 
-RSpec.describe "Vectors" do
+RSpec.describe 'Vectors' do
   def set_keypairs(v, conn)
     role = conn.protocol.initiator ? 'init' : 'resp'
-    conn.set_keypair_from_private(Noise::KeyPair::STATIC, v[(role + '_static').to_sym].htb) if v[(role + '_static').to_sym]
-    conn.set_keypair_from_private(Noise::KeyPair::EPHEMERAL, v[(role + '_ephemeral').to_sym].htb) if v[(role + '_ephemeral').to_sym]
-    conn.set_keypair_from_public(Noise::KeyPair::REMOTE_STATIC, v[(role + '_remote_static').to_sym].htb) if v[(role + '_remote_static').to_sym]
+    key = (role + '_static').to_sym
+    conn.set_keypair_from_private(Noise::KeyPair::STATIC, v[key].htb) if v[key]
+
+    key = (role + '_ephemeral').to_sym
+    conn.set_keypair_from_private(Noise::KeyPair::EPHEMERAL, v[key].htb) if v[key]
+
+    key = (role + '_remote_static').to_sym
+    conn.set_keypair_from_public(Noise::KeyPair::REMOTE_STATIC, v[key].htb) if v[key]
   end
 
   files = ['cacophony.txt', 'snow-multipsk.txt']
 
   vectors =
-    files.map do |file|
+    files.flat_map do |file|
       path = "#{File.dirname(__FILE__)}/vectors/#{file}"
       JSON.parse(File.read(path), symbolize_names: true)
-    end.flatten(1)
+    end
 
   it { expect(vectors).not_to be_nil }
 
   describe 'test_vectors' do
     vectors.each do |v|
-      next if v[:protocol_name].include?("BLAKE")
-      next if v[:protocol_name].include?("448")
-      next if v[:protocol_name].include?("AES")
-      next if v[:protocol_name].include?("psk")
+      next if v[:protocol_name].include?('BLAKE')
+      next if v[:protocol_name].include?('448')
+      next if v[:protocol_name].include?('AES')
+      next if v[:protocol_name].include?('psk')
       # next if v[:protocol_name] != 'Noise_NN_25519_ChaChaPoly_SHA256'
       # next if v[:protocol_name] != 'Noise_IK_25519_ChaChaPoly_SHA256'
 
@@ -56,9 +61,7 @@ RSpec.describe "Vectors" do
 
           initiator_to_responder = true
           handshake_finished = false
-          i = 0
-          for message in v[:messages]
-            i += 1
+          v[:messages].each do |message|
             if handshake_finished
               one_way_or_initiator = initiator.protocol.pattern.one_way || initiator_to_responder
               sender = one_way_or_initiator ? initiator : responder

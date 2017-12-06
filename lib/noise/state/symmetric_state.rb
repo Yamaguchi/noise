@@ -67,13 +67,8 @@ module Noise
         c2 = CipherState.new(cipher: @protocol.cipher_fn)
         c1.initialize_key(temp_k1)
         c2.initialize_key(temp_k2)
-        if @protocol.initiator
-          @protocol.cipher_state_encrypt = c1
-          @protocol.cipher_state_decrypt = c2
-        else
-          @protocol.cipher_state_encrypt = c2
-          @protocol.cipher_state_decrypt = c1
-        end
+        @protocol.cipher_state_encrypt = @protocol.initiator ? c1 : c2
+        @protocol.cipher_state_decrypt = @protocol.initiator ? c2 : c1
         @protocol.handshake_done
         [c1, c2]
       end

@@ -30,14 +30,20 @@ module Noise
 
     # initiator [Boolean]
     def required_keypairs(initiator)
+      initiator ? required_keypairs_of_initiator : required_keypairs_of_responder
+    end
+
+    def required_keypairs_of_initiator
       required = []
-      if initiator
-        required << :s if ['K', 'X', 'I'].include?(@name[0])
-        required << :rs if @one_way || @name[1] == 'K'
-      else
-        required << :rs if @name[0] == 'K'
-        required << :s if @one_way || ['K', 'X'].include?(@name[1])
-      end
+      required << :s if %w[K X I].include?(@name[0])
+      required << :rs if @one_way || @name[1] == 'K'
+      required
+    end
+
+    def required_keypairs_of_responder
+      required = []
+      required << :rs if @name[0] == 'K'
+      required << :s if @one_way || %w[K X].include?(@name[1])
       required
     end
 
@@ -187,37 +193,3 @@ module Noise
     end
   end
 end
-    #
-    # def has_pre_messages(self):
-    #     return any(map(lambda x: len(x) > 0, self.pre_messages))
-    #
-    # def get_initiator_pre_messages(self) -> list:
-    #     return self.pre_messages[0].copy()
-    #
-    # def get_responder_pre_messages(self) -> list:
-    #     return self.pre_messages[1].copy()
-    #
-    # def apply_pattern_modifiers(self, modifiers: List[str]) -> None:
-    #     # Applies given pattern modifiers to self.tokens of the Pattern instance.
-    #     for modifier in modifiers:
-    #         if modifier.startswith('psk'):
-    #             try:
-    #                 index = int(modifier.replace('psk', '', 1))
-    #             except ValueError:
-    #                 raise ValueError('Improper psk modifier {}'.format(modifier))
-    #
-    #             if index // 2 > len(self.tokens):
-    #                 raise ValueError('Modifier {} cannot be applied - pattern has not enough messages'.format(modifier))
-    #
-    #             # Add TOKEN_PSK in the correct place in the correct message
-    #             if index == 0:  # if 0, insert at the beginning of first message
-    #                 self.tokens[0].insert(0, TOKEN_PSK)
-    #             else:  # if bigger than zero, append at the end of first, second etc.
-    #                 self.tokens[index - 1].append(TOKEN_PSK)
-    #             self.psk_count += 1
-    #
-    #         elif modifier == 'fallback':
-    #             raise NotImplementedError  # TODO implement
-    #
-    #         else:
-    #             raise ValueError('Unknown pattern modifier {}'.format(modifier))

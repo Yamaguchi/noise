@@ -109,7 +109,6 @@ module Noise
             temp = message[0...len + offset]
             message = message[(len + offset)..-1]
             @rs = @protocol.dh_fn.class.from_public(@symmetric_state.decrypt_and_hash(temp))
-            # @protocol.keypair.load(@symmetric_state.decrypt_and_hash(temp))
             next
           when 'ee'
             @symmetric_state.mix_key(dh_fn.dh(@e[0], @re[1]))

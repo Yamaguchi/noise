@@ -10,6 +10,12 @@ Style/Documentation:
 Style/LambdaCall:
   Enabled: false
 
+Style/SymbolArray:
+  MinSize: 100
+
+Style/WordArray:
+  MinSize: 100
+
 AllCops:
   TargetRubyVersion: 2.4.1
 

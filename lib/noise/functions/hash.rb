@@ -14,9 +14,9 @@ module Noise
       end
 
       def self.create_hkdf_fn(digest)
-        ->(chaining_key, input_key_material, num_output) {
+        lambda do |chaining_key, input_key_material, num_output|
           hkdf(chaining_key, input_key_material, num_output, digest)
-        }
+        end
       end
 
       def self.hkdf(chaining_key, input_key_material, num_outputs, digest)
