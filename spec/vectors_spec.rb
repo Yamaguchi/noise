@@ -32,10 +32,7 @@ RSpec.describe 'Vectors' do
     vectors.each do |v|
       next if v[:protocol_name].include?('BLAKE')
       next if v[:protocol_name].include?('448')
-      next if v[:protocol_name].include?('AES')
       next if v[:protocol_name].include?('psk')
-      # next if v[:protocol_name] != 'Noise_NN_25519_ChaChaPoly_SHA256'
-      # next if v[:protocol_name] != 'Noise_IK_25519_ChaChaPoly_SHA256'
 
       context "test-vector #{v[:protocol_name]}" do
         it do

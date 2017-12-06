@@ -11,8 +11,6 @@ The followings are not supported yet.
 - Hash Functions
   - Blake2b
   - Blake2s
-- Cipher Functions
-  - AesGcm
 - PSK Mode
 
 ## Installation

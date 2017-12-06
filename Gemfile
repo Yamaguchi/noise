@@ -4,3 +4,5 @@ git_source(:github) {|repo_name| "https://github.com/#{repo_name}" }
 
 # Specify your gem's dependencies in noise.gemspec
 gemspec
+
+gem 'aead', git: 'https://github.com/FredericHeihoff/aead.git', branch: :master
