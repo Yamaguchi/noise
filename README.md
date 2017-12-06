@@ -9,7 +9,6 @@ The followings are not supported yet.
 - DH Functions
   - Curve448
 - Hash Functions
-  - Blake2b
   - Blake2s
 - PSK Mode
 
