@@ -14,8 +14,8 @@ module Noise
     }.stringify_keys.freeze
 
     DH = {
-      '25519': Noise::Functions::DH::DH25519,
-      '448': Noise::Functions::DH::DH448
+      '25519': Noise::Functions::DH::ED25519,
+      '448': Noise::Functions::DH::ED448
     }.stringify_keys.freeze
 
     HASH = {

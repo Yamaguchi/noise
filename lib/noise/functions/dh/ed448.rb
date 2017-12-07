@@ -1,7 +1,7 @@
 module Noise
   module Functions
     module DH
-      class DH448
+      class ED448
         DHLEN = 56
         def generate_keypair
           throw NotImplementedError

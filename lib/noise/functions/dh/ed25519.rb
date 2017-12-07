@@ -3,7 +3,7 @@
 module Noise
   module Functions
     module DH
-      class DH25519
+      class ED25519
         DHLEN = 32
         def generate_keypair
           private_key = 1 + SecureRandom.random_number(RbNaCl::GroupElement::STANDARD_GROUP_ORDER - 1)
