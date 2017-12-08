@@ -6,14 +6,14 @@ module Noise
       class DH25519
         DHLEN = 32
         def generate_keypair
-          private_key = RbNaCl::Signatures::Ed25519::SigningKey.generate
-          public_key = private_key.verify_key
-          [private_key.to_bytes, public_key.to_bytes]
+          private_key = 1 + SecureRandom.random_number(RbNaCl::GroupElement::STANDARD_GROUP_ORDER - 1)
+          scalar_as_string = ECDSA::Format::IntegerOctetString.encode(private_key, 32)
+          public_key = RbNaCl::GroupElements::Curve25519.base.mult(scalar_as_string)
+          [ECDSA::Format::IntegerOctetString.encode(private_key, 32), public_key.to_bytes]
         end
 
         def dh(private_key, public_key)
-          point = RbNaCl::GroupElement.new(public_key).mult(private_key)
-          point.to_bytes
+          RbNaCl::GroupElement.new(public_key).mult(private_key).to_bytes
         end
 
         def dhlen
@@ -21,14 +21,12 @@ module Noise
         end
 
         def self.from_private(private_key)
-          private_key = RbNaCl::GroupElements::Curve25519.new(private_key)
           public_key = RbNaCl::GroupElements::Curve25519.base.mult(private_key)
-          [private_key.to_bytes, public_key.to_bytes]
+          [private_key, public_key.to_bytes]
         end
 
         def self.from_public(public_key)
-          public_key = RbNaCl::Signatures::Ed25519::VerifyKey.new(public_key)
-          [nil, public_key.to_bytes]
+          [nil, public_key]
         end
       end
     end
