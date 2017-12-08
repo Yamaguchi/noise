@@ -2,6 +2,12 @@
 
 A Ruby implementation of the Noise Protocol framework(http://noiseprotocol.org/).
 
+## Secp256k1
+
+Secp256k1 cipher function is supported.
+This is required for Lightning Network, layer-2 protocol for bitcoin.
+see 
+
 ## Future Works
 
 The followings are not supported yet.
