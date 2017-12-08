@@ -63,6 +63,7 @@ module Noise
             @e = dh_fn.generate_keypair if @e.compact.empty?
             message_buffer << @e[1]
             @symmetric_state.mix_hash(@e[1])
+            @symmetric_state.mix_key(@e[1]) if @protocol.psk_handshake?
             next
           when 's'
             message_buffer << @symmetric_state.encrypt_and_hash(@s[1])
@@ -87,6 +88,9 @@ module Noise
           when 'ss'
             @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs[1]))
             next
+          when 'psk'
+            @symmetric_state.mix_key_and_hash(@protocol.psks.shift)
+            next
           end
         end
         message_buffer << @symmetric_state.encrypt_and_hash(payload)
@@ -103,6 +107,7 @@ module Noise
             @re = @protocol.dh_fn.class.from_public(message[0...len]) if @re.compact.empty?
             message = message[len..-1]
             @symmetric_state.mix_hash(@re[1])
+            @symmetric_state.mix_key(@re[1]) if @protocol.psk_handshake?
             next
           when 's'
             offset = @protocol.cipher_state_handshake.key? ? 16 : 0
@@ -129,6 +134,9 @@ module Noise
             next
           when 'ss'
             @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs[1]))
+            next
+          when 'psk'
+            @symmetric_state.mix_key_and_hash(@protocol.psks.shift)
             next
           end
         end

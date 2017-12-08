@@ -12,20 +12,49 @@ module Noise
   end
 
   class Pattern
-    attr_reader :one_way, :tokens
+    attr_reader :one_way, :tokens, :modifiers
 
     def self.create(name)
-      class_name = "Noise::Pattern#{name}"
+      pattern_set = name.scan(/([A-Z]+)([^A-Z]*)/)&.first
+      pattern = pattern_set&.first
+      modifiers = pattern_set[1].split('+')
+      class_name = "Noise::Pattern#{pattern}"
       klass = Object.const_get(class_name)
-      klass.new
+      klass.new(modifiers)
     end
 
-    def initialize
+    def initialize(modifiers)
       @pre_messages = [[], []]
       @tokens = []
       @name = ''
       @one_way = false
       @psk_count = 0
+      @modifiers = modifiers
+    end
+
+    def apply_pattern_modifiers
+      @modifiers.each do |modifier|
+        if modifier.start_with?('psk')
+          begin
+            index = modifier.gsub(/psk/, '').to_i
+          rescue
+            raise Noise::Exceptions::PSKValueError
+          end
+          # if index * 2 > @tokens.size
+          #   raise PSKValueError
+          # end
+          if index == 0
+            @tokens[0].insert(0, Token::PSK)
+          else
+            @tokens[index - 1] << Token::PSK
+          end
+          @psk_count += 1
+        elsif modifier == 'fallback'
+          raise NotImplementedError
+        else
+          raise Noise::Exceptions::PSKValueError
+        end
+      end
     end
 
     # initiator [Boolean]
@@ -57,15 +86,15 @@ module Noise
   end
 
   class OneWayPattern < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @one_way = true
     end
   end
 
   class PatternN < OneWayPattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'N'
       @pre_messages = [[], [Token::S]]
       @tokens = [[Token::E, Token::ES]]
@@ -73,8 +102,8 @@ module Noise
   end
 
   class PatternK < OneWayPattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'K'
       @pre_messages = [[Token::S], [Token::S]]
       @tokens = [[Token::E, Token::ES, Token::SS]]
@@ -82,8 +111,8 @@ module Noise
   end
 
   class PatternX < OneWayPattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'X'
       @pre_messages = [[], [Token::S]]
       @tokens = [[Token::E, Token::ES, Token::S, Token::SS]]
@@ -91,8 +120,8 @@ module Noise
   end
 
   class PatternNN < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'NN'
       @pre_messages = []
       @tokens = [[Token::E], [Token::E, Token::EE]]
@@ -100,8 +129,8 @@ module Noise
   end
 
   class PatternKN < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'KN'
       @pre_messages = [[Token::S], []]
       @tokens = [[Token::E], [Token::E, Token::EE, Token::SE]]
@@ -109,8 +138,8 @@ module Noise
   end
 
   class PatternNK < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'NK'
       @pre_messages = [[], [Token::S]]
       @tokens = [[Token::E, Token::ES], [Token::E, Token::EE]]
@@ -118,8 +147,8 @@ module Noise
   end
 
   class PatternKK < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'KK'
       @pre_messages = [[Token::S], [Token::S]]
       @tokens = [[Token::E, Token::ES, Token::SS], [Token::E, Token::EE, Token::SE]]
@@ -127,16 +156,16 @@ module Noise
   end
 
   class PatternNX < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'NX'
       @tokens = [[Token::E], [Token::E, Token::EE, Token::S, Token::ES]]
     end
   end
 
   class PatternKX < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'KX'
       @pre_messages = [[Token::S], []]
       @tokens = [[Token::E], [Token::E, Token::EE, Token::SE, Token::S, Token::ES]]
@@ -144,24 +173,24 @@ module Noise
   end
 
   class PatternXN < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'XN'
       @tokens = [[Token::E], [Token::E, Token::EE], [Token::S, Token::SE]]
     end
   end
 
   class PatternIN < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'IN'
       @tokens = [[Token::E, Token::S], [Token::E, Token::EE, Token::SE]]
     end
   end
 
   class PatternXK < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'XK'
       @pre_messages = [[], [Token::S]]
       @tokens = [[Token::E, Token::ES], [Token::E, Token::EE], [Token::S, Token::SE]]
@@ -169,8 +198,8 @@ module Noise
   end
 
   class PatternIK < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'IK'
       @pre_messages = [[], [Token::S]]
       @tokens = [[Token::E, Token::ES, Token::S, Token::SS], [Token::E, Token::EE, Token::SE]]
@@ -178,16 +207,16 @@ module Noise
   end
 
   class PatternXX < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'XX'
       @tokens = [[Token::E], [Token::E, Token::EE, Token::S, Token::ES], [Token::S, Token::SE]]
     end
   end
 
   class PatternIX < Pattern
-    def initialize
-      super
+    def initialize(modifiers)
+      super(modifiers)
       @name = 'IX'
       @tokens = [[Token::E, Token::S], [Token::E, Token::EE, Token::SE, Token::S, Token::ES]]
     end

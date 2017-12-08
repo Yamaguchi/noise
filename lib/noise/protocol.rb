@@ -2,11 +2,13 @@
 
 module Noise
   class Protocol
-    attr_accessor :prologue, :initiator, :cipher_state_encrypt, :cipher_state_decrypt
+    attr_accessor :prologue, :initiator
+    attr_accessor :cipher_state_encrypt, :cipher_state_decrypt
+    attr_accessor :cipher_state_handshake
+    attr_accessor :psks
     attr_reader :name, :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn, :pattern
     attr_reader :handshake_state, :keypairs, :keypair_fn
     attr_reader :handshake_hash
-    attr_accessor :cipher_state_handshake
 
     CIPHER = {
       'AESGCM': Noise::Functions::Cipher::AesGcm,
@@ -33,12 +35,17 @@ module Noise
 
     def initialize(name, pattern_name, cipher_name, hash_name, dh_name)
       @name = name
-      @pattern = Noise::Pattern.create(pattern_name[0..1])
+      @pattern = Noise::Pattern.create(pattern_name)
       @keypairs = { s: nil, e: nil, rs: nil, re: nil }
       @cipher_fn = CIPHER[cipher_name]&.new
       @hash_fn = HASH[hash_name]&.new
       @dh_fn = DH[dh_name]&.new
       @hkdf_fn = Noise::Functions::Hash.create_hkdf_fn(hash_name)
+      @psks = nil
+      @is_psk_handshake = @pattern.modifiers.any? { |m| m.start_with?('psk') }
+
+      @pattern.apply_pattern_modifiers
+
       raise Noise::Exceptions::ProtocolNameError unless @cipher_fn && @hash_fn && @dh_fn
     end
 
@@ -63,14 +70,16 @@ module Noise
     end
 
     def validate
-      # TODO : support PSK
-      # if @psk_handshake
-      #   if @psks.inclueds? {|psk| psk.size != 32}
-      #     raise NoisePSKError
-      #   else
-      #     raise NoisePSKError
-      #   end
-      # end
+      if psk_handshake?
+        if @psks.any? {|psk| psk.bytesize != 32}
+          raise NoisePSKError # Invalid psk length! Has to be 32 bytes long
+        end
+        if @pattern.psk_count != @psks.count
+          # Bad number of PSKs provided to this protocol! {} are required,
+          # given {}'.format(self.pattern.psk_count, len(self.psks)))
+          raise NoisePSKError
+        end
+      end
 
       # You need to set role with NoiseConnection.set_as_initiator
       # or NoiseConnection.set_as_responder
@@ -102,6 +111,10 @@ module Noise
         @keypairs[:re]
       )
       @symmetric_state = @handshake_state.symmetric_state
+    end
+
+    def psk_handshake?
+      @is_psk_handshake
     end
   end
 end

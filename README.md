@@ -10,7 +10,6 @@ The followings are not supported yet.
   - Curve448
 - Hash Functions
   - Blake2s
-- PSK Mode
 
 ## Installation
 

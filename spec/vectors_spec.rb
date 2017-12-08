@@ -32,16 +32,14 @@ RSpec.describe 'Vectors' do
     vectors.each do |v|
       next if v[:protocol_name].include?('BLAKE2s')
       next if v[:protocol_name].include?('448')
-      next if v[:protocol_name].include?('psk')
 
       context "test-vector #{v[:protocol_name]}" do
         it do
           initiator = Noise::Connection.new(v[:protocol_name])
           responder = Noise::Connection.new(v[:protocol_name])
           if v.key?(:init_psks) && v.key?(:resp_psks)
-            # TODO : PSK Mode support
-            # initiator.psks = v[:init_psks]
-            # responder.psks = v[:resp_psks]
+            initiator.psks = v[:init_psks]
+            responder.psks = v[:resp_psks]
             next
           end
 
