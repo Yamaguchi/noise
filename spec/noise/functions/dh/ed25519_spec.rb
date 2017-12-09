@@ -18,11 +18,11 @@ RSpec.describe Noise::Functions::DH::ED25519 do
     subject { ed25519.dh(private_key, public_key).bth }
     it { is_expected.to eq shared_key }
   end
-  describe '#dh and generate_keypair' do
+
+  describe '#generate_keypair' do
     let(:dh) { Noise::Functions::DH::ED25519.new }
     let(:alice) { dh.generate_keypair }
     let(:bob) { dh.generate_keypair }
-
     it { expect(dh.dh(alice[0], bob[1])).to eq dh.dh(bob[0], alice[1]) }
   end
 end
