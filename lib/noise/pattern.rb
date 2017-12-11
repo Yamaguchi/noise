@@ -40,9 +40,9 @@ module Noise
           rescue
             raise Noise::Exceptions::PSKValueError
           end
-          # if index * 2 > @tokens.size
-          #   raise PSKValueError
-          # end
+          if index / 2 > @tokens.size
+            raise Noise::Exceptions::PSKValueError
+          end
           if index == 0
             @tokens[0].insert(0, Token::PSK)
           else
