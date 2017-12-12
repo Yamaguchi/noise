@@ -12,7 +12,7 @@ module Noise
   end
 
   class Pattern
-    attr_reader :one_way, :tokens, :modifiers
+    attr_reader :one_way, :tokens, :modifiers, :psk_count
 
     def self.create(name)
       pattern_set = name.scan(/([A-Z]+)([^A-Z]*)/)&.first

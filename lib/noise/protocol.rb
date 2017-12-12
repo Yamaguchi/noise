@@ -41,7 +41,7 @@ module Noise
       @hash_fn = HASH[hash_name]&.new
       @dh_fn = DH[dh_name]&.new
       @hkdf_fn = Noise::Functions::Hash.create_hkdf_fn(hash_name)
-      @psks = nil
+      @psks = []
       @is_psk_handshake = @pattern.modifiers.any? { |m| m.start_with?('psk') }
 
       @pattern.apply_pattern_modifiers
@@ -71,13 +71,13 @@ module Noise
 
     def validate
       if psk_handshake?
-        if @psks.any? {|psk| psk.bytesize != 32}
-          raise NoisePSKError # Invalid psk length! Has to be 32 bytes long
+        if @psks.any? { |psk| psk.bytesize != 32 }
+          raise Noise::Exceptions::NoisePSKError # Invalid psk length! Has to be 32 bytes long
         end
         if @pattern.psk_count != @psks.count
           # Bad number of PSKs provided to this protocol! {} are required,
           # given {}'.format(self.pattern.psk_count, len(self.psks)))
-          raise NoisePSKError
+          raise Noise::Exceptions::NoisePSKError
         end
       end
 
@@ -86,11 +86,6 @@ module Noise
       raise Noise::Exceptions::NoiseValidationError if @initiator.nil?
 
       # 'Keypair {} has to be set for chosen handshake pattern'.format(keypair)
-      # require 'pp'
-      # pp @pattern
-      # pp @initiator
-      # pp @pattern.required_keypairs(@initiator)
-      # pp @keypairs
       raise Noise::Exceptions::NoiseValidationError if @pattern.required_keypairs(@initiator).any? { |keypair| !@keypairs[keypair] }
 
       if @keypairs[:e] || @keypairs[:re]
@@ -98,6 +93,7 @@ module Noise
         # One of ephemeral keypairs is already set.
         # This is OK for testing, but should NEVER happen in production!
       end
+      true
     end
 
     def initialise_handshake_state
