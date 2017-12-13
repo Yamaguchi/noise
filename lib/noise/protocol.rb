@@ -37,15 +37,19 @@ module Noise
       @name = name
       @pattern = Noise::Pattern.create(pattern_name)
       @keypairs = { s: nil, e: nil, rs: nil, re: nil }
-      @cipher_fn = CIPHER[cipher_name]&.new
-      @hash_fn = HASH[hash_name]&.new
-      @dh_fn = DH[dh_name]&.new
       @hkdf_fn = Noise::Functions::Hash.create_hkdf_fn(hash_name)
       @psks = []
       @is_psk_handshake = @pattern.modifiers.any? { |m| m.start_with?('psk') }
 
       @pattern.apply_pattern_modifiers
 
+      initialize_fn!(cipher_name, hash_name, dh_name)
+    end
+
+    def initialize_fn!(cipher_name, hash_name, dh_name)
+      @cipher_fn = CIPHER[cipher_name]&.new
+      @hash_fn = HASH[hash_name]&.new
+      @dh_fn = DH[dh_name]&.new
       raise Noise::Exceptions::ProtocolNameError unless @cipher_fn && @hash_fn && @dh_fn
     end
 
@@ -66,27 +70,29 @@ module Noise
       @dh_fn = nil
       @hash_fn = nil
       @keypair_fn = nil
+    end
 
+    def validate_psk!
+      # Invalid psk length! Has to be 32 bytes long
+      raise Noise::Exceptions::NoisePSKError if @psks.any? { |psk| psk.bytesize != 32 }
+      # Bad number of PSKs provided to this protocol! {} are required,
+      # given {}'.format(self.pattern.psk_count, len(self.psks)))
+      raise Noise::Exceptions::NoisePSKError if @pattern.psk_count != @psks.count
+    end
+
+    def valid_keypairs?
+      @pattern.required_keypairs(@initiator).any? { |keypair| !@keypairs[keypair] }
     end
 
     def validate
-      if psk_handshake?
-        if @psks.any? { |psk| psk.bytesize != 32 }
-          raise Noise::Exceptions::NoisePSKError # Invalid psk length! Has to be 32 bytes long
-        end
-        if @pattern.psk_count != @psks.count
-          # Bad number of PSKs provided to this protocol! {} are required,
-          # given {}'.format(self.pattern.psk_count, len(self.psks)))
-          raise Noise::Exceptions::NoisePSKError
-        end
-      end
+      validate_psk! if psk_handshake?
 
       # You need to set role with NoiseConnection.set_as_initiator
       # or NoiseConnection.set_as_responder
       raise Noise::Exceptions::NoiseValidationError if @initiator.nil?
 
       # 'Keypair {} has to be set for chosen handshake pattern'.format(keypair)
-      raise Noise::Exceptions::NoiseValidationError if @pattern.required_keypairs(@initiator).any? { |keypair| !@keypairs[keypair] }
+      raise Noise::Exceptions::NoiseValidationError if valid_keypairs?
 
       if @keypairs[:e] || @keypairs[:re]
         # warnings

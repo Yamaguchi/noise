@@ -6,16 +6,26 @@ require 'json'
 require 'pp'
 
 RSpec.describe 'Vectors' do
+  def to_keypair_value(enum, v, role)
+    key =
+      case enum
+      when Noise::KeyPair::STATIC then (role + '_static').to_sym
+      when Noise::KeyPair::EPHEMERAL then (role + '_ephemeral').to_sym
+      when Noise::KeyPair::REMOTE_STATIC then (role + '_remote_static').to_sym
+      end
+    v[key]
+  end
+
   def set_keypairs(v, conn)
     role = conn.protocol.initiator ? 'init' : 'resp'
-    key = (role + '_static').to_sym
-    conn.set_keypair_from_private(Noise::KeyPair::STATIC, v[key].htb) if v[key]
+    value = to_keypair_value(Noise::KeyPair::STATIC, v, role)
+    conn.set_keypair_from_private(Noise::KeyPair::STATIC, value.htb) if value
 
-    key = (role + '_ephemeral').to_sym
-    conn.set_keypair_from_private(Noise::KeyPair::EPHEMERAL, v[key].htb) if v[key]
+    value = to_keypair_value(Noise::KeyPair::EPHEMERAL, v, role)
+    conn.set_keypair_from_private(Noise::KeyPair::EPHEMERAL, value.htb) if value
 
-    key = (role + '_remote_static').to_sym
-    conn.set_keypair_from_public(Noise::KeyPair::REMOTE_STATIC, v[key].htb) if v[key]
+    value = to_keypair_value(Noise::KeyPair::REMOTE_STATIC, v, role)
+    conn.set_keypair_from_public(Noise::KeyPair::REMOTE_STATIC, value.htb) if value
   end
 
   files = ['cacophony.txt', 'snow-multipsk.txt']

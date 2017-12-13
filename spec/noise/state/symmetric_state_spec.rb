@@ -29,16 +29,4 @@ RSpec.describe Noise::State::SymmetricState do
     it { expect(subject.ck.bth).to eq expected_ck }
     it { expect(subject.cipher_state.k.bth).to eq expected_k }
   end
-
-  # describe '#encrypt_and_hash' do
-  #   let(:state) do
-  #     Noise::State::SymmetricState.new.tap do |state|
-  #       state.initialize_symmetric(Noise::Protocol.create('Noise_NN_25519_ChaChaPoly_SHA256'))
-  #     end
-  #   end
-  #   let(:plaintext) { '4d757272617920526f746862617264'.htb }
-  #   let(:h) { '507eb1fe01fd7c4fe1829ef6a07f38340b4a72e6dffbb3ffb0f9209271775b4e'.htb }
-  #   let(:expected) { 'a0ff96bdf86b579ef7dbf94e812a7470b903c20a85a87e3a1fe863264ae547'.htb }
-  #   it { expect(subject.encrypt_and_hash(plaintext).bth).to eq expected.bth }
-  # end
 end

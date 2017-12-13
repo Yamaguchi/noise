@@ -35,15 +35,9 @@ module Noise
     def apply_pattern_modifiers
       @modifiers.each do |modifier|
         if modifier.start_with?('psk')
-          begin
-            index = modifier.gsub(/psk/, '').to_i
-          rescue
-            raise Noise::Exceptions::PSKValueError
-          end
-          if index / 2 > @tokens.size
-            raise Noise::Exceptions::PSKValueError
-          end
-          if index == 0
+          index = modifier.gsub(/psk/, '').to_i
+          raise Noise::Exceptions::PSKValueError if index / 2 > @tokens.size
+          if index.zero?
             @tokens[0].insert(0, Token::PSK)
           else
             @tokens[index - 1] << Token::PSK

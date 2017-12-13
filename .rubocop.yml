@@ -4,6 +4,9 @@ Metrics/BlockLength:
 Metrics/LineLength:
   Max: 120
 
+Metrics/MethodLength:
+  Max: 30
+
 Style/Documentation:
   Enabled: false
 
@@ -18,4 +21,3 @@ Style/WordArray:
 
 AllCops:
   TargetRubyVersion: 2.4.1
-
