@@ -14,17 +14,17 @@ module Noise
 
       attr_reader :message_patterns, :symmetric_state
 
-      def initialize(protocol, initiator, prologue, s, e, rs, re)
+      def initialize(protocol, initiator, prologue, keypairs)
         # @protocol = handshake_pattern.to_protocol
         @protocol = protocol
         @symmetric_state = SymmetricState.new
         @symmetric_state.initialize_symmetric(@protocol)
         @symmetric_state.mix_hash(prologue)
         @initiator = initiator
-        @s = [s].flatten
-        @e = [e].flatten
-        @rs = [rs].flatten
-        @re = [re].flatten
+        @s = keypairs[:s]
+        @e = keypairs[:e]
+        @rs = keypairs[:rs]
+        @re = keypairs[:re]
 
         # TODO : Calls MixHash() once for each public key listed in the pre-messages from  handshake_pattern, with the
         # specified public key as input (see Section 7 for an explanation of pre-messages). If both initiator and
@@ -60,7 +60,7 @@ module Noise
         pattern.each do |token|
           case token
           when 'e'
-            @e = dh_fn.generate_keypair if @e.compact.empty?
+            @e = dh_fn.generate_keypair if @e.empty?
             message_buffer << @e[1]
             @symmetric_state.mix_hash(@e[1])
             @symmetric_state.mix_key(@e[1]) if @protocol.psk_handshake?
@@ -104,7 +104,7 @@ module Noise
         pattern.each do |token|
           case token
           when 'e'
-            @re = @protocol.dh_fn.class.from_public(message[0...len]) if @re.compact.empty?
+            @re = @protocol.dh_fn.class.from_public(message[0...len]) if @re.empty?
             message = message[len..-1]
             @symmetric_state.mix_hash(@re[1])
             @symmetric_state.mix_key(@re[1]) if @protocol.psk_handshake?
