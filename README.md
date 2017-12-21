@@ -20,6 +20,15 @@ The followings are not supported yet.
 
 ## Installation
 
+This library requires [libsecp256k1](https://github.com/bitcoin-core/secp256k1).
+
+    $ git clone https://github.com/bitcoin-core/secp256k1
+    $ cd secp256k1
+    $ ./autogen.sh
+    $ ./configure --enable-experimental --enable-module-ecdh --enable-module-recovery --enable-benchmark=false
+    $ make
+    $ sudo make install
+
 Add this line to your application's Gemfile:
 
 ```

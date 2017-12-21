@@ -15,11 +15,8 @@ module Noise
         end
 
         def dh(private_key, public_key)
-          group = ECDSA::Group::Secp256k1
-          point = ECDSA::Format::PointOctetString.decode(public_key, group)
-          scalar = ECDSA::Format::IntegerOctetString.decode(private_key)
-          point = point.multiply_by_scalar(scalar)
-          ECDSA::Format::PointOctetString.encode(point, compression: true)
+          key = ::Secp256k1::PublicKey.new(pubkey: public_key, raw: true)
+          key.ecdh(private_key)
         end
 
         def dhlen
