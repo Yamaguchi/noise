@@ -28,8 +28,7 @@ RSpec.describe 'Vectors' do
     conn.set_keypair_from_public(Noise::KeyPair::REMOTE_STATIC, value.htb) if value
   end
 
-  files = ['cacophony.txt', 'snow-multipsk.txt']
-
+  files = ['cacophony.txt', 'snow-multipsk.txt', 'lightning.txt']
   vectors =
     files.flat_map do |file|
       path = "#{File.dirname(__FILE__)}/vectors/#{file}"

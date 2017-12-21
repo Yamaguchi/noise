@@ -17,7 +17,8 @@ module Noise
 
     DH = {
       '25519': Noise::Functions::DH::ED25519,
-      '448': Noise::Functions::DH::ED448
+      '448': Noise::Functions::DH::ED448,
+      'secp256k1': Noise::Functions::DH::Secp256k1
     }.stringify_keys.freeze
 
     HASH = {
