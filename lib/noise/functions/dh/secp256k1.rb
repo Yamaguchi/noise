@@ -20,7 +20,7 @@ module Noise
         end
 
         def dhlen
-          64
+          33
         end
 
         def self.from_private(private_key)
