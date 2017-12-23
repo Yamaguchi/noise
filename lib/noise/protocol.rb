@@ -63,6 +63,8 @@ module Noise
         end
       end
       @handshake_hash = @symmetric_state.handshake_hash
+      @keypairs = @handshake_state.keypairs
+
       @handshake_state = nil
       @symmetric_state = nil
       @cipher_state_handshake = nil
