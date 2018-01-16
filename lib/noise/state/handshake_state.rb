@@ -72,18 +72,12 @@ module Noise
             @symmetric_state.mix_key(dh_fn.dh(@e[0], @re[1]))
             next
           when 'es'
-            if @initiator
-              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs[1]))
-            else
-              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re[1]))
-            end
+            private_key, public_key = @initiator ? [@e[0], @rs[1]] : [@s[0], @re[1]]
+            @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
             next
           when 'se'
-            if @initiator
-              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re[1]))
-            else
-              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs[1]))
-            end
+            private_key, public_key = @initiator ? [@s[0], @re[1]] : [@e[0], @rs[1]]
+            @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
             next
           when 'ss'
             @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs[1]))
@@ -119,18 +113,12 @@ module Noise
             @symmetric_state.mix_key(dh_fn.dh(@e[0], @re[1]))
             next
           when 'es'
-            if @initiator
-              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs[1]))
-            else
-              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re[1]))
-            end
+            private_key, public_key = @initiator ? [@e[0], @rs[1]] : [@s[0], @re[1]]
+            @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
             next
           when 'se'
-            if @initiator
-              @symmetric_state.mix_key(dh_fn.dh(@s[0], @re[1]))
-            else
-              @symmetric_state.mix_key(dh_fn.dh(@e[0], @rs[1]))
-            end
+            private_key, public_key = @initiator ? [@s[0], @re[1]] : [@e[0], @rs[1]]
+            @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
             next
           when 'ss'
             @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs[1]))
