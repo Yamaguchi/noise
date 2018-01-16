@@ -9,6 +9,7 @@ module Noise
     attr_reader :name, :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn, :pattern
     attr_reader :handshake_state, :keypairs, :keypair_fn
     attr_reader :handshake_hash
+    attr_accessor :ck
 
     CIPHER = {
       'AESGCM': Noise::Functions::Cipher::AesGcm,
@@ -66,6 +67,7 @@ module Noise
       @keypairs = @handshake_state.keypairs
 
       @handshake_state = nil
+      @ck = @symmetric_state.ck
       @symmetric_state = nil
       @cipher_state_handshake = nil
       @prologue = nil
