@@ -15,7 +15,7 @@ module Noise
         end
 
         def nonce_to_bytes(n)
-          "\00" * 4 + format('%16x', n).htb.reverse
+          "\x00" * 4 + format('%16x', n).htb.reverse
         end
       end
     end
