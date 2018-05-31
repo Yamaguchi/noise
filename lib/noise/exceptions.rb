@@ -2,6 +2,8 @@
 
 module Noise
   module Exceptions
+    autoload :DecryptError, 'noise/exceptions/decrypt_error'
+    autoload :EncryptError, 'noise/exceptions/encrypt_error'
     autoload :MaxNonceError, 'noise/exceptions/max_nonce_error'
     autoload :ProtocolNameError, 'noise/exceptions/protocol_name_error'
     autoload :NoiseHandshakeError, 'noise/exceptions/noise_handshake_error'
