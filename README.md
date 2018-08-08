@@ -29,19 +29,6 @@ This library requires [libsecp256k1](https://github.com/bitcoin-core/secp256k1).
     $ make
     $ sudo make install
 
-In addition, libsodium is required.
-
-    $ brew install libsodium
-
-or 
-
-    $ git clone https://github.com/jedisct1/libsodium
-    $ cd libsodium
-    $ ./autogen.sh
-    $ ./configure
-    $ make
-    $ sudo make install
-
 Add this line to your application's Gemfile:
 
 ```
