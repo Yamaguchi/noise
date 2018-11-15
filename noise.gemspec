@@ -27,6 +27,6 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency 'secp256k1-ruby'
   spec.add_runtime_dependency 'ecdsa'
-  spec.add_runtime_dependency 'rbnacl-libsodium'
+  spec.add_runtime_dependency 'rbnacl'
   spec.add_runtime_dependency 'ruby-hmac'
 end

@@ -3,7 +3,7 @@
 require 'noise/version'
 
 require 'ecdsa'
-require 'rbnacl/libsodium'
+require 'rbnacl'
 require 'ruby_hmac'
 require 'secp256k1'
 require 'securerandom'
