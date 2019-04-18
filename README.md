@@ -15,8 +15,6 @@ The followings are not supported yet.
 
 - DH Functions
   - Curve448
-- Hash Functions
-  - Blake2s
 
 ## Installation
 
