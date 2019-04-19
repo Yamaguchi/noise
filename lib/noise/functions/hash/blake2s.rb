@@ -62,7 +62,7 @@ module Noise
           raise ArgumentError if out_len == 0 || out_len > 32
           h = IV.dup
           h[0] ^= 0x01010000 ^ (key.size << 8) ^ out_len
-          t = [0, 0]
+          t = 0
           c = 0
           b = Array.new(Blake2s::BLOCKLEN).fill(0, key.size)
           ctx = Context.new(b, h, t, c, out_len)
@@ -76,12 +76,7 @@ module Noise
         def update_internal(ctx, input)
           input.size.times do |i|
             if ctx.c == Blake2s::BLOCKLEN
-              ctx.t[0] += ctx.c
-              # if ctx.t[0] < ctx.c
-              if ctx.t[0] > 0xFFFFFFFF
-                ctx.t[0] = ctx.t[0] - 0xFFFFFFFF
-                ctx.t[1] += 1
-              end
+              ctx.t += ctx.c
               compress(ctx, false)
               ctx.c = 0
             end
@@ -92,12 +87,7 @@ module Noise
         end
 
         def final(ctx, out)
-          ctx.t[0] += ctx.c
-          if ctx.t[0] > 0xFFFFFFFF
-            ctx.t[0] = ctx.t[0] - 0xFFFFFFFF
-            ctx.t[1] += 1
-          end
-
+          ctx.t += ctx.c
           while ctx.c < Blake2s::BLOCKLEN
             ctx.b[ctx.c] = 0
             ctx.c += 1
@@ -151,12 +141,10 @@ module Noise
             v[i + 8] = IV[i]
           end
 
-          v[12] ^= ctx.t[0]
-          v[13] ^= ctx.t[1]
+          v[12] ^= ctx.t & 0xFFFFFFFF
+          v[13] ^= (ctx.t / 0x100000000) & 0xFFFFFFFF
 
-          if last
-            v[14] = ~v[14] & 0xFFFFFFFF
-          end
+          v[14] = (last ? ~v[14] : v[14]) & 0xFFFFFFFF
 
           16.times do |i|
             m[i] = get32(ctx.b[4 * i], ctx.b[4 * i + 1], ctx.b[4 * i + 2], ctx.b[4 * i + 3])
