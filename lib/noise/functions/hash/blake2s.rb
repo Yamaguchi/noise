@@ -111,8 +111,17 @@ module Noise
 
         private
 
+        def to_int32(x)
+          x = x & 0xFFFFFFFF
+          x < 0x80000000 ? x : x - 2**32
+        end
+
+        def rshift(x, y, range=32)
+          (x + (x > 0 ? 0 : 2 ** range)) >> y
+        end
+
         def rotr32(x, y)
-          ([x >> y].pack("L>").unpack1("B*").to_i(2) & ( 1 << (32 - y) )- 1) ^ (x << (32 - y))
+          to_int32(x << (32 - y) ^ rshift(x & 0xFFFFFFFF, y))
         end
 
         def get32(p0, p1, p2, p3)
@@ -120,19 +129,19 @@ module Noise
         end
 
         def mix_g(v, a, b, c, d, x, y)
-          v[a] = [v[a] + v[b] + x].pack("L*").unpack("l*").first
-          v[d] = [v[d] ^ v[a]].pack("L*").unpack("l*").first
-          v[d] = [rotr32(v[d], 16)].pack("L*").unpack("l*").first
-          v[c] = [v[c] + v[d]].pack("L*").unpack("l*").first
-          v[b] = [v[b] ^ v[c]].pack("L*").unpack("l*").first
-          v[b] = [rotr32(v[b], 12)].pack("L*").unpack("l*").first
+          v[a] = v[a] + v[b] + x
+          v[d] = v[d] ^ v[a]
+          v[d] = rotr32(v[d], 16)
+          v[c] = v[c] + v[d]
+          v[b] = v[b] ^ v[c]
+          v[b] = rotr32(v[b], 12)
 
-          v[a] = [v[a] + v[b] + y].pack("L*").unpack("l*").first
-          v[d] = [v[d] ^ v[a]].pack("L*").unpack("l*").first
-          v[d] = [rotr32(v[d], 8)].pack("L*").unpack("l*").first
-          v[c] = [v[c] + v[d]].pack("L*").unpack("l*").first
-          v[b] = [v[b] ^ v[c]].pack("L*").unpack("l*").first
-          v[b] = [rotr32(v[b], 7)].pack("L*").unpack("l*").first
+          v[a] = v[a] + v[b] + y
+          v[d] = v[d] ^ v[a]
+          v[d] = rotr32(v[d], 8)
+          v[c] = v[c] + v[d]
+          v[b] = v[b] ^ v[c]
+          v[b] = rotr32(v[b], 7)
         end
 
         def compress(ctx, last)
