@@ -57,57 +57,56 @@ module Noise
           out.pack("C*")
         end
 
-
-          # @return context
-          def init(out_len, key)
-            raise ArgumentError if out_len == 0 || out_len > 32
-            h = IV.dup
-            h[0] ^= 0x01010000 ^ (key.size << 8) ^ out_len
-            t = [0, 0]
-            c = 0
-            b = Array.new(Blake2s::BLOCKLEN).fill(0, key.size)
-            ctx = Context.new(b, h, t, c, out_len)
-            if key.size > 0
-              update_internal(ctx, key)
-              ctx.c = 64
-            end
-            ctx
+        # @return context
+        def init(out_len, key)
+          raise ArgumentError if out_len == 0 || out_len > 32
+          h = IV.dup
+          h[0] ^= 0x01010000 ^ (key.size << 8) ^ out_len
+          t = [0, 0]
+          c = 0
+          b = Array.new(Blake2s::BLOCKLEN).fill(0, key.size)
+          ctx = Context.new(b, h, t, c, out_len)
+          if key.size > 0
+            update_internal(ctx, key)
+            ctx.c = 64
           end
+          ctx
+        end
 
-          def update_internal(ctx, input)
-            input.size.times do |i|
-              if ctx.c == Blake2s::BLOCKLEN
-                ctx.t[0] += ctx.c
-                # if ctx.t[0] < ctx.c
-                if ctx.t[0] > 0xFFFFFFFF
-                  ctx.t[0] = ctx.t[0] - 0xFFFFFFFF
-                  ctx.t[1] += 1
-                end
-                compress(ctx, false)
-                ctx.c = 0
+        def update_internal(ctx, input)
+          input.size.times do |i|
+            if ctx.c == Blake2s::BLOCKLEN
+              ctx.t[0] += ctx.c
+              # if ctx.t[0] < ctx.c
+              if ctx.t[0] > 0xFFFFFFFF
+                ctx.t[0] = ctx.t[0] - 0xFFFFFFFF
+                ctx.t[1] += 1
               end
-
-              ctx.b[ctx.c] = input[i]
-              ctx.c += 1
+              compress(ctx, false)
+              ctx.c = 0
             end
+
+            ctx.b[ctx.c] = input[i]
+            ctx.c += 1
+          end
+        end
+
+        def final(ctx, out)
+          ctx.t[0] += ctx.c
+          if ctx.t[0] > 0xFFFFFFFF
+            ctx.t[0] = ctx.t[0] - 0xFFFFFFFF
+            ctx.t[1] += 1
           end
 
-          def final(ctx, out)
-            ctx.t[0] += ctx.c
-            if ctx.t[0] > 0xFFFFFFFF
-              ctx.t[0] = ctx.t[0] - 0xFFFFFFFF
-              ctx.t[1] += 1
-            end
-
-            while ctx.c < Blake2s::BLOCKLEN
-              ctx.b[ctx.c] = 0
-              ctx.c += 1
-            end
-            compress(ctx, true)
-            ctx.out_len.times do |i|
-              out << ((ctx.h[i >> 2] >> (8 * (i & 3))) & 0xff)
-            end
+          while ctx.c < Blake2s::BLOCKLEN
+            ctx.b[ctx.c] = 0
+            ctx.c += 1
           end
+          compress(ctx, true)
+          ctx.out_len.times do |i|
+            out << ((ctx.h[i >> 2] >> (8 * (i & 3))) & 0xff)
+          end
+        end
 
         private
 
