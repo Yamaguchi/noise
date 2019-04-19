@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'secp256k1'
+
 module Noise
   module Functions
     module DH

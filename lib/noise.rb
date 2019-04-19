@@ -5,7 +5,6 @@ require 'noise/version'
 require 'ecdsa'
 require 'rbnacl'
 require 'ruby_hmac'
-require 'secp256k1'
 require 'securerandom'
 
 require 'noise/utils/hash'
