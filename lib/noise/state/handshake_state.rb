@@ -34,7 +34,7 @@ module Noise
         # TODO : Calls MixHash() once for each public key listed in the pre-messages from  handshake_pattern, with the
         # specified public key as input (see Section 7 for an explanation of pre-messages). If both initiator and
         # responder have pre-messages, the initiator's public keys are hashed first.
-        get_local_keypair = ->(token) { instance_variable_get('@' + token) }
+        get_local_keypair = ->(token) { instance_variable_get('@' + token)[1] }
         get_remote_keypair = ->(token) { instance_variable_get('@r' + token) }
 
         if initiator
@@ -47,12 +47,12 @@ module Noise
 
         @protocol.pattern.initiator_pre_messages&.map do |message|
           keypair = initiator_keypair_getter.call(message)
-          @symmetric_state.mix_hash(keypair[1])
+          @symmetric_state.mix_hash(keypair)
         end
 
         @protocol.pattern.responder_pre_messages&.map do |message|
           keypair = responder_keypair_getter.call(message)
-          @symmetric_state.mix_hash(keypair[1])
+          @symmetric_state.mix_hash(keypair)
         end
         # Sets message_patterns to the message patterns from handshake_pattern
         @message_patterns = @protocol.pattern.tokens.dup
@@ -75,18 +75,18 @@ module Noise
             message_buffer << @symmetric_state.encrypt_and_hash(@s[1])
             next
           when 'ee'
-            @symmetric_state.mix_key(dh_fn.dh(@e[0], @re[1]))
+            @symmetric_state.mix_key(dh_fn.dh(@e[0], @re))
             next
           when 'es'
-            private_key, public_key = @initiator ? [@e[0], @rs[1]] : [@s[0], @re[1]]
+            private_key, public_key = @initiator ? [@e[0], @rs] : [@s[0], @re]
             @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
             next
           when 'se'
-            private_key, public_key = @initiator ? [@s[0], @re[1]] : [@e[0], @rs[1]]
+            private_key, public_key = @initiator ? [@s[0], @re] : [@e[0], @rs]
             @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
             next
           when 'ss'
-            @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs[1]))
+            @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs))
             next
           when 'psk'
             @symmetric_state.mix_key_and_hash(@protocol.psks.shift)
@@ -106,30 +106,30 @@ module Noise
         pattern.each do |token|
           case token
           when 'e'
-            @re = @protocol.dh_fn.class.from_public(message[0...len]) if @re.empty?
+            @re = message[0...len] if @re.nil?
             message = message[len..-1]
-            @symmetric_state.mix_hash(@re[1])
-            @symmetric_state.mix_key(@re[1]) if @protocol.psk_handshake?
+            @symmetric_state.mix_hash(@re)
+            @symmetric_state.mix_key(@re) if @protocol.psk_handshake?
             next
           when 's'
             offset = @protocol.cipher_state_handshake.key? ? 16 : 0
             temp = message[0...len + offset]
             message = message[(len + offset)..-1]
-            @rs = @protocol.dh_fn.class.from_public(@symmetric_state.decrypt_and_hash(temp))
+            @rs = @symmetric_state.decrypt_and_hash(temp)
             next
           when 'ee'
-            @symmetric_state.mix_key(dh_fn.dh(@e[0], @re[1]))
+            @symmetric_state.mix_key(dh_fn.dh(@e[0], @re))
             next
           when 'es'
-            private_key, public_key = @initiator ? [@e[0], @rs[1]] : [@s[0], @re[1]]
+            private_key, public_key = @initiator ? [@e[0], @rs] : [@s[0], @re]
             @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
             next
           when 'se'
-            private_key, public_key = @initiator ? [@s[0], @re[1]] : [@e[0], @rs[1]]
+            private_key, public_key = @initiator ? [@s[0], @re] : [@e[0], @rs]
             @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
             next
           when 'ss'
-            @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs[1]))
+            @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs))
             next
           when 'psk'
             @symmetric_state.mix_key_and_hash(@protocol.psks.shift)
@@ -139,8 +139,6 @@ module Noise
         payload_buffer << @symmetric_state.decrypt_and_hash(message)
         @symmetric_state.split if @message_patterns.empty?
       end
-
-      private
 
       # no need for ephemeral keys after handshake has completed.
       def keypairs

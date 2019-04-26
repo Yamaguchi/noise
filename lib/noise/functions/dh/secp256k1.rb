@@ -37,10 +37,6 @@ module Noise
           point = group.generator.multiply_by_scalar(scalar)
           [private_key, ECDSA::Format::PointOctetString.encode(point, compression: true)]
         end
-
-        def self.from_public(public_key)
-          [nil, public_key]
-        end
       end
     end
   end

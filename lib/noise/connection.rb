@@ -43,7 +43,7 @@ module Noise
     end
 
     def set_keypair_from_public(keypair, public_key)
-      @protocol.keypairs[keypair.to_sym] = @protocol.dh_fn.class.from_public(public_key)
+      @protocol.keypairs[keypair.to_sym] = public_key
     end
 
     def start_handshake

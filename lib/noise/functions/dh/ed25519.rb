@@ -24,10 +24,6 @@ module Noise
           public_key = RbNaCl::GroupElements::Curve25519.base.mult(private_key)
           [private_key, public_key.to_bytes]
         end
-
-        def self.from_public(public_key)
-          [nil, public_key]
-        end
       end
     end
   end
