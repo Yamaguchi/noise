@@ -2,13 +2,6 @@
 
 module Noise
   class Connection
-    module Status
-      STATIC = 1
-      REMOTE_STATIC = 2
-      EPHEMERAL = 3
-      REMOTE_EPHEMERAL = 4
-    end
-
     attr_accessor :protocol, :handshake_started, :handshake_finished, :fn
 
     def initialize(name, keypairs: { s: nil, e: nil, rs: nil, re: nil })
