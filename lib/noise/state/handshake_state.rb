@@ -10,12 +10,17 @@ module Noise
     # rs: The remote party's static public key
     # re: The remote party's ephemeral public key
     #
+    # A HandshakeState also has variables to track its role, and the remaining portion of the handshake pattern:
+    #
+    # initiator: A boolean indicating the initiator or responder role.
+    #
+    # message_patterns: A sequence of message patterns.
+    #     Each message pattern is a sequence of tokens from the set ("e", "s", "ee", "es", "se", "ss").
     class HandshakeState
 
       attr_reader :message_patterns, :symmetric_state
 
       def initialize(protocol, initiator, prologue, keypairs)
-        # @protocol = handshake_pattern.to_protocol
         @protocol = protocol
         @symmetric_state = SymmetricState.new
         @symmetric_state.initialize_symmetric(@protocol)
@@ -53,6 +58,7 @@ module Noise
         @message_patterns = @protocol.pattern.tokens.dup
       end
 
+      # Takes a payload byte sequence which may be zero-length, and a message_buffer to write the output into
       def write_message(payload, message_buffer)
         pattern = @message_patterns.shift
         dh_fn = @protocol.dh_fn
@@ -91,6 +97,8 @@ module Noise
         @symmetric_state.split if @message_patterns.empty?
       end
 
+      # Takes a byte sequence containing a Noise handshake message,
+      # and a payload_buffer to write the message's plaintext payload into
       def read_message(message, payload_buffer)
         pattern = @message_patterns.shift
         dh_fn = @protocol.dh_fn
@@ -131,6 +139,8 @@ module Noise
         payload_buffer << @symmetric_state.decrypt_and_hash(message)
         @symmetric_state.split if @message_patterns.empty?
       end
+
+      private
 
       # no need for ephemeral keys after handshake has completed.
       def keypairs

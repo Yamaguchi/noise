@@ -17,11 +17,13 @@ module Noise
         @cipher = cipher
       end
 
+      # @param [String] 32 bytes key
       def initialize_key(key)
         @k = key
         @n = 0
       end
 
+      # @return [Boolean] true if k is non-empty, false otherwise.
       def key?
         !@k.nil?
       end
@@ -30,6 +32,7 @@ module Noise
         @n = nonce
       end
 
+      #  @return [String] ENCRYPT(k, n++, ad, plaintext) if k is non-empty, otherwise returns plaintext.
       def encrypt_with_ad(ad, plaintext)
         return plaintext unless key?
         raise Noise::Exceptions::MaxNonceError if @n == MAX_NONCE
@@ -38,6 +41,7 @@ module Noise
         ciphertext
       end
 
+      # @return DECRYPT(k, n++, ad, ciphertext) if k is non-empty, otherwise returns ciphertext.
       def decrypt_with_ad(ad, ciphertext)
         return ciphertext unless key?
         raise Noise::Exceptions::MaxNonceError if @n == MAX_NONCE
