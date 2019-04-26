@@ -24,6 +24,6 @@ RSpec.describe Noise::Functions::DH::Secp256k1 do
     let(:alice) { secp256k1.generate_keypair }
     let(:bob) { secp256k1.generate_keypair }
 
-    it { expect(secp256k1.dh(alice[0], bob[1])).to eq secp256k1.dh(bob[0], alice[1]) }
+    it { expect(secp256k1.dh(alice.private_key, bob.public_key)).to eq secp256k1.dh(bob.private_key, alice.public_key) }
   end
 end

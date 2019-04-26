@@ -12,6 +12,7 @@ require 'noise/utils/string'
 
 module Noise
   autoload :Connection, 'noise/connection'
+  autoload :Key, 'noise/key'
   autoload :KeyPair, 'noise/key_pair'
   autoload :Protocol, 'noise/protocol'
   autoload :Pattern, 'noise/pattern'

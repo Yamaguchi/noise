@@ -34,7 +34,7 @@ module Noise
         # TODO : Calls MixHash() once for each public key listed in the pre-messages from  handshake_pattern, with the
         # specified public key as input (see Section 7 for an explanation of pre-messages). If both initiator and
         # responder have pre-messages, the initiator's public keys are hashed first.
-        get_local_keypair = ->(token) { instance_variable_get('@' + token)[1] }
+        get_local_keypair = ->(token) { instance_variable_get('@' + token).public_key }
         get_remote_keypair = ->(token) { instance_variable_get('@r' + token) }
 
         if initiator
@@ -66,31 +66,24 @@ module Noise
         pattern.each do |token|
           case token
           when 'e'
-            @e = dh_fn.generate_keypair if @e.empty?
-            message_buffer << @e[1]
-            @symmetric_state.mix_hash(@e[1])
-            @symmetric_state.mix_key(@e[1]) if @protocol.psk_handshake?
-            next
+            @e = dh_fn.generate_keypair if @e.nil?
+            message_buffer << @e.public_key
+            @symmetric_state.mix_hash(@e.public_key)
+            @symmetric_state.mix_key(@e.public_key) if @protocol.psk_handshake?
           when 's'
-            message_buffer << @symmetric_state.encrypt_and_hash(@s[1])
-            next
+            message_buffer << @symmetric_state.encrypt_and_hash(@s.public_key)
           when 'ee'
-            @symmetric_state.mix_key(dh_fn.dh(@e[0], @re))
-            next
+            @symmetric_state.mix_key(dh_fn.dh(@e.private_key, @re))
           when 'es'
-            private_key, public_key = @initiator ? [@e[0], @rs] : [@s[0], @re]
+            private_key, public_key = @initiator ? [@e.private_key, @rs] : [@s.private_key, @re]
             @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
-            next
           when 'se'
-            private_key, public_key = @initiator ? [@s[0], @re] : [@e[0], @rs]
+            private_key, public_key = @initiator ? [@s.private_key, @re] : [@e.private_key, @rs]
             @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
-            next
           when 'ss'
-            @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs))
-            next
+            @symmetric_state.mix_key(dh_fn.dh(@s.private_key, @rs))
           when 'psk'
             @symmetric_state.mix_key_and_hash(@protocol.psks.shift)
-            next
           end
         end
         message_buffer << @symmetric_state.encrypt_and_hash(payload)
@@ -110,30 +103,23 @@ module Noise
             message = message[len..-1]
             @symmetric_state.mix_hash(@re)
             @symmetric_state.mix_key(@re) if @protocol.psk_handshake?
-            next
           when 's'
             offset = @protocol.cipher_state_handshake.key? ? 16 : 0
             temp = message[0...len + offset]
             message = message[(len + offset)..-1]
             @rs = @symmetric_state.decrypt_and_hash(temp)
-            next
           when 'ee'
-            @symmetric_state.mix_key(dh_fn.dh(@e[0], @re))
-            next
+            @symmetric_state.mix_key(dh_fn.dh(@e.private_key, @re))
           when 'es'
-            private_key, public_key = @initiator ? [@e[0], @rs] : [@s[0], @re]
+            private_key, public_key = @initiator ? [@e.private_key, @rs] : [@s.private_key, @re]
             @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
-            next
           when 'se'
-            private_key, public_key = @initiator ? [@s[0], @re] : [@e[0], @rs]
+            private_key, public_key = @initiator ? [@s.private_key, @re] : [@e.private_key, @rs]
             @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
-            next
           when 'ss'
-            @symmetric_state.mix_key(dh_fn.dh(@s[0], @rs))
-            next
+            @symmetric_state.mix_key(dh_fn.dh(@s.private_key, @rs))
           when 'psk'
             @symmetric_state.mix_key_and_hash(@protocol.psks.shift)
-            next
           end
         end
         payload_buffer << @symmetric_state.decrypt_and_hash(message)

@@ -38,7 +38,7 @@ module Noise
     def initialize(name, pattern_name, cipher_name, hash_name, dh_name)
       @name = name
       @pattern = Noise::Pattern.create(pattern_name)
-      @keypairs = { s: [], e: [], rs: nil, re: nil }
+      @keypairs = { s: nil, e: nil, rs: nil, re: nil }
       @hkdf_fn = Noise::Functions::Hash.create_hkdf_fn(hash_name)
       @psks = []
       @is_psk_handshake = @pattern.modifiers.any? { |m| m.start_with?('psk') }

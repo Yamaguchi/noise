@@ -14,10 +14,10 @@ module Noise
           group = ECDSA::Group::Secp256k1
           private_key = 1 + SecureRandom.random_number(group.order - 1)
           public_key = group.generator.multiply_by_scalar(private_key)
-          [
+          Noise::Key.new(
             ECDSA::Format::IntegerOctetString.encode(private_key, 32),
             ECDSA::Format::PointOctetString.encode(public_key, compression: true)
-          ]
+          )
         end
 
         def dh(private_key, public_key)
@@ -35,7 +35,7 @@ module Noise
           group = ECDSA::Group::Secp256k1
           scalar = ECDSA::Format::IntegerOctetString.decode(private_key)
           point = group.generator.multiply_by_scalar(scalar)
-          [private_key, ECDSA::Format::PointOctetString.encode(point, compression: true)]
+          Noise::Key.new(private_key, ECDSA::Format::PointOctetString.encode(point, compression: true))
         end
       end
     end
