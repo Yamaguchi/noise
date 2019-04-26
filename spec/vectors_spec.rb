@@ -16,16 +16,18 @@ RSpec.describe 'Vectors' do
     v[key]
   end
 
-  def set_keypairs(v, conn)
-    role = conn.protocol.initiator ? 'init' : 'resp'
+  def get_keypairs(v, initiator)
+    keypairs = { s: nil, e: nil, rs: nil, re: nil }
+    role = initiator ? 'init' : 'resp'
     value = to_keypair_value(Noise::KeyPair::STATIC, v, role)
-    conn.set_keypair_from_private(Noise::KeyPair::STATIC, value.htb) if value
+    keypairs[Noise::KeyPair::STATIC.to_sym] = value.htb if value
 
     value = to_keypair_value(Noise::KeyPair::EPHEMERAL, v, role)
-    conn.set_keypair_from_private(Noise::KeyPair::EPHEMERAL, value.htb) if value
+    keypairs[Noise::KeyPair::EPHEMERAL.to_sym] = value.htb if value
 
     value = to_keypair_value(Noise::KeyPair::REMOTE_STATIC, v, role)
-    conn.set_keypair_from_public(Noise::KeyPair::REMOTE_STATIC, value.htb) if value
+    keypairs[Noise::KeyPair::REMOTE_STATIC.to_sym] = value.htb if value
+    keypairs
   end
 
   files = ['cacophony.txt', 'snow-multipsk.txt', 'lightning.txt']
@@ -43,8 +45,10 @@ RSpec.describe 'Vectors' do
 
       context "test-vector #{v[:protocol_name]}" do
         it do
-          initiator = Noise::Connection.new(v[:protocol_name])
-          responder = Noise::Connection.new(v[:protocol_name])
+          keypairs = get_keypairs(v, true)
+          initiator = Noise::Connection.new(v[:protocol_name], keypairs: keypairs)
+          keypairs = get_keypairs(v, false)
+          responder = Noise::Connection.new(v[:protocol_name], keypairs: keypairs)
           if v.key?(:init_psks) && v.key?(:resp_psks)
             initiator.psks = v[:init_psks]
             responder.psks = v[:resp_psks]
@@ -53,11 +57,11 @@ RSpec.describe 'Vectors' do
 
           initiator.prologue = v[:init_prologue].htb
           initiator.set_as_initiator!
-          set_keypairs(v, initiator)
+          # set_keypairs(v, initiator)
 
           responder.prologue = v[:resp_prologue].htb
           responder.set_as_responder!
-          set_keypairs(v, responder)
+          # set_keypairs(v, responder)
 
           initiator.start_handshake
           responder.start_handshake

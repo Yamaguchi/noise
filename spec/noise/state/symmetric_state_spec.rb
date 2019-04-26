@@ -5,9 +5,11 @@ require 'spec_helper'
 RSpec.describe Noise::State::SymmetricState do
   let(:state) do
     Noise::State::SymmetricState.new.tap do |state|
-      state.initialize_symmetric(Noise::Protocol.create('Noise_XKpsk3_25519_ChaChaPoly_SHA256'))
+      protocol = Noise::Protocol.create('Noise_XKpsk3_25519_ChaChaPoly_SHA256', { s: nil, e: nil, rs: nil, re: nil })
+      state.initialize_symmetric(protocol)
     end
   end
+
   describe '#initialize_symmetric' do
     subject { state }
     let(:expected) { 'b4ac732ebf6d89e36c61a61dc5eaf91dbd600e33bcc0b9f02f800cbfd8ea31c3'.htb }

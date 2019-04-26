@@ -125,11 +125,6 @@ module Noise
         payload_buffer << @symmetric_state.decrypt_and_hash(message)
         @symmetric_state.split if @message_patterns.empty?
       end
-
-      # no need for ephemeral keys after handshake has completed.
-      def keypairs
-        { s: @s, rs: @rs }
-      end
     end
   end
 end

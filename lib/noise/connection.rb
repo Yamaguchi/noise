@@ -11,8 +11,8 @@ module Noise
 
     attr_accessor :protocol, :handshake_started, :handshake_finished, :fn
 
-    def initialize(name)
-      @protocol = Protocol.create(name)
+    def initialize(name, keypairs: { s: nil, e: nil, rs: nil, re: nil })
+      @protocol = Protocol.create(name, keypairs)
       @handshake_started = false
       @handshake_finished = false
       @fn = nil
@@ -36,14 +36,6 @@ module Noise
     def set_as_responder!
       @protocol.initiator = false
       @fn = @read_message_proc
-    end
-
-    def set_keypair_from_private(keypair, private_key)
-      @protocol.keypairs[keypair.to_sym] = @protocol.dh_fn.class.from_private(private_key)
-    end
-
-    def set_keypair_from_public(keypair, public_key)
-      @protocol.keypairs[keypair.to_sym] = public_key
     end
 
     def start_handshake

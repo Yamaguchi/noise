@@ -7,7 +7,7 @@ module Noise
     attr_accessor :cipher_state_handshake
     attr_accessor :psks
     attr_reader :name, :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn, :pattern
-    attr_reader :handshake_state, :keypairs, :keypair_fn
+    attr_reader :handshake_state, :keypair_fn
     attr_reader :handshake_hash
     attr_accessor :ck
 
@@ -29,16 +29,16 @@ module Noise
       'SHA512': Noise::Functions::Hash::Sha512
     }.stringify_keys.freeze
 
-    def self.create(name)
+    def self.create(name, keypairs)
       prefix, pattern_name, dh_name, cipher_name, hash_name = name.split('_')
       raise Noise::Exceptions::ProtocolNameError if prefix != 'Noise'
-      new(name, pattern_name, cipher_name, hash_name, dh_name)
+      new(name, pattern_name, cipher_name, hash_name, dh_name, keypairs)
     end
 
-    def initialize(name, pattern_name, cipher_name, hash_name, dh_name)
+    def initialize(name, pattern_name, cipher_name, hash_name, dh_name, keypairs)
       @name = name
       @pattern = Noise::Pattern.create(pattern_name)
-      @keypairs = { s: nil, e: nil, rs: nil, re: nil }
+      @keypairs = keypairs
       @hkdf_fn = Noise::Functions::Hash.create_hkdf_fn(hash_name)
       @psks = []
       @is_psk_handshake = @pattern.modifiers.any? { |m| m.start_with?('psk') }
@@ -46,6 +46,10 @@ module Noise
       @pattern.apply_pattern_modifiers
 
       initialize_fn!(cipher_name, hash_name, dh_name)
+
+      # parameter keypairs[:e] and keypairs[:s] are strings, so should convert Noise::Key object.
+      @keypairs[:e] = @dh_fn.class.from_private(@keypairs[:e]) if @keypairs[:e]
+      @keypairs[:s] = @dh_fn.class.from_private(@keypairs[:s]) if @keypairs[:s]
     end
 
     def initialize_fn!(cipher_name, hash_name, dh_name)
@@ -64,8 +68,6 @@ module Noise
         end
       end
       @handshake_hash = @symmetric_state.handshake_hash
-      @keypairs = @handshake_state.keypairs
-
       @handshake_state = nil
       @ck = @symmetric_state.ck
       @symmetric_state = nil
@@ -98,12 +100,6 @@ module Noise
 
       # 'Keypair {} has to be set for chosen handshake pattern'.format(keypair)
       raise Noise::Exceptions::NoiseValidationError if valid_keypairs?
-
-      if @keypairs[:e] || @keypairs[:re]
-        # warnings
-        # One of ephemeral keypairs is already set.
-        # This is OK for testing, but should NEVER happen in production!
-      end
       true
     end
 
