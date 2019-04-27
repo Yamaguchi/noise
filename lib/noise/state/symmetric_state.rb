@@ -11,13 +11,13 @@ module Noise
       attr_reader :h, :ck
       attr_reader :cipher_state
 
-      def initialize_symmetric(protocol)
+      def initialize_symmetric(protocol, connection)
         @protocol = protocol
+        @connection = connection
         @ck = @h = initialize_h(protocol)
 
         @cipher_state = CipherState.new(cipher: @protocol.cipher_fn)
         @cipher_state.initialize_key(nil)
-        @protocol.cipher_state_handshake = @cipher_state
       end
 
       def mix_key(input_key_meterial)
@@ -66,9 +66,7 @@ module Noise
         temp_k1, temp_k2 = @protocol.hkdf_fn.call(@ck, '', 2)
         c1 = create_cipher_state(temp_k1)
         c2 = create_cipher_state(temp_k2)
-        @protocol.cipher_state_encrypt = @protocol.initiator ? c1 : c2
-        @protocol.cipher_state_decrypt = @protocol.initiator ? c2 : c1
-        @protocol.handshake_done
+        @connection.handshake_done(c1, c2)
         [c1, c2]
       end
 

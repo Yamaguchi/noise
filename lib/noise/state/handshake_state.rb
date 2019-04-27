@@ -20,10 +20,11 @@ module Noise
 
       attr_reader :message_patterns, :symmetric_state
 
-      def initialize(protocol, initiator, prologue, keypairs)
+      def initialize(connection, protocol, initiator, prologue, keypairs)
+        @connection = connection
         @protocol = protocol
         @symmetric_state = SymmetricState.new
-        @symmetric_state.initialize_symmetric(@protocol)
+        @symmetric_state.initialize_symmetric(@protocol, connection)
         @symmetric_state.mix_hash(prologue)
         @initiator = initiator
         @s = keypairs[:s]
@@ -104,7 +105,7 @@ module Noise
             @symmetric_state.mix_hash(@re)
             @symmetric_state.mix_key(@re) if @protocol.psk_handshake?
           when 's'
-            offset = @protocol.cipher_state_handshake.key? ? 16 : 0
+            offset = @connection.cipher_state_handshake.key? ? 16 : 0
             temp = message[0...len + offset]
             message = message[(len + offset)..-1]
             @rs = @symmetric_state.decrypt_and_hash(temp)

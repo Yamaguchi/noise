@@ -91,16 +91,16 @@ RSpec.describe 'Vectors' do
               if sender.handshake_finished && receiver.handshake_finished
                 handshake_finished = true
                 if v.key?(:handshake_hash)
-                  expect(initiator.protocol.handshake_hash.bth).to eq v[:handshake_hash]
-                  expect(responder.protocol.handshake_hash.bth).to eq v[:handshake_hash]
+                  expect(initiator.handshake_hash.bth).to eq v[:handshake_hash]
+                  expect(responder.handshake_hash.bth).to eq v[:handshake_hash]
                 end
-                expect(initiator.protocol.cipher_state_encrypt.k).to eq responder.protocol.cipher_state_decrypt.k
+                expect(initiator.cipher_state_encrypt.k).to eq responder.cipher_state_decrypt.k
 
                 if initiator.protocol.pattern.one_way
-                  expect(initiator.protocol.cipher_state_decrypt).to be_nil
-                  expect(responder.protocol.cipher_state_encrypt).to be_nil
+                  expect(initiator.cipher_state_decrypt).to be_nil
+                  expect(responder.cipher_state_encrypt).to be_nil
                 else
-                  expect(initiator.protocol.cipher_state_decrypt.k).to eq responder.protocol.cipher_state_encrypt.k
+                  expect(initiator.cipher_state_decrypt.k).to eq responder.cipher_state_encrypt.k
                 end
               else
                 expect(sender.handshake_finished).to eq receiver.handshake_finished

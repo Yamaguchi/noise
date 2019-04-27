@@ -5,8 +5,8 @@ require 'spec_helper'
 RSpec.describe Noise::State::SymmetricState do
   let(:state) do
     Noise::State::SymmetricState.new.tap do |state|
-      protocol = Noise::Protocol.create('Noise_XKpsk3_25519_ChaChaPoly_SHA256', { s: nil, e: nil, rs: nil, re: nil })
-      state.initialize_symmetric(protocol)
+      connection = Noise::Connection.new('Noise_XKpsk3_25519_ChaChaPoly_SHA256')
+      state.initialize_symmetric(connection.protocol, connection)
     end
   end
 
