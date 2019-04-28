@@ -49,7 +49,53 @@ gem 'secp256k1-ruby'
 
 ## Usage
 
-TODO: Write usage instructions here
+Followings shows handshake protocol with "Noise_NN_25519_ChaChaPoly_BLAKE2b"
+
+### Handshake
+
+#### initiator
+
+```
+initiator = Noise::Connection::Initiator.new("Noise_NN_25519_ChaChaPoly_BLAKE2b")
+initiator.prologue = "test" # => "test"
+initiator.start_handshake # => true
+cipher = initiator.write_message("") # => "\xB6\xF7gmxi\xAB\xBCY|t\xF0\x9D\x01A\ad\x92\xBBvp\x80ZNU\f=\x83\x81^\xFD\x15"
+```
+
+then initiator sends `cipher` to responder.
+
+#### responder
+
+Responder receive `cipher` from initiator.
+Responder respond messages to initiator.
+
+```
+responder = Noise::Connection::Responder.new("Noise_NN_25519_ChaChaPoly_BLAKE2b")
+responder.prologue = "test" # => "test"
+responder.start_handshake # => true
+plain = responder.read_message(cipher) # => ""
+cipher = responder.write_message("") # => "\v\xD9\x97'\xC0\xB1\xC9\xFFD\x8C\x7F\x18L\xB0\xF2\x14\xB0\x11\xC0\x90\xAAZ\xE1\x03\x17z)\xB81/5L\x16\xE3\xD1\xBE<{\xB8\xBB\xD6\xF1\x00\x10]\x99=\xD7"
+```
+
+
+### initiator
+
+```
+plain = initiator.read_message(cipher) # => ""
+```
+
+### Send transport message (after handshake finished)
+
+```
+cipher = initiator.encrypt("Hello, World!") # => "\xDA\xC7\xD7as\v\xFA\xCC,\xB3\xC7\xD0/xL\xE8I,\xD9\n\xEExh\x8F\xFA\xD6\x01\x99W"
+```
+
+### Receive transport message
+
+```
+plain = responder.decrypt(cipher) # => "Hello, World!"
+```
+
 
 ## Development
 
