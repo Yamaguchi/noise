@@ -84,7 +84,7 @@ module Noise
           when 'ss'
             @symmetric_state.mix_key(dh_fn.dh(@s.private_key, @rs))
           when 'psk'
-            @symmetric_state.mix_key_and_hash(@protocol.psks.shift)
+            @symmetric_state.mix_key_and_hash(@connection.psks.shift)
           end
         end
         message_buffer << @symmetric_state.encrypt_and_hash(payload)
@@ -120,7 +120,7 @@ module Noise
           when 'ss'
             @symmetric_state.mix_key(dh_fn.dh(@s.private_key, @rs))
           when 'psk'
-            @symmetric_state.mix_key_and_hash(@protocol.psks.shift)
+            @symmetric_state.mix_key_and_hash(@connection.psks.shift)
           end
         end
         payload_buffer << @symmetric_state.decrypt_and_hash(message)

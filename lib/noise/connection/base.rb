@@ -5,6 +5,7 @@ module Noise
     class Base
       attr_reader :protocol, :handshake_started, :handshake_finished, :handshake_hash
       attr_reader :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake
+      attr_accessor :psks, :prologue
 
       def initialize(name, keypairs: { s: nil, e: nil, rs: nil, re: nil })
         @protocol = Protocol.create(name)
@@ -18,14 +19,6 @@ module Noise
         @handshake_finished = false
         @next_message = nil
 
-      end
-
-      def psks=(psks)
-        @psks = psks
-      end
-
-      def prologue=(prologue)
-        @prologue = prologue
       end
 
       def start_handshake

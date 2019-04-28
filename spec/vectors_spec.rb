@@ -50,9 +50,8 @@ RSpec.describe 'Vectors' do
           keypairs = get_keypairs(v, false)
           responder = Noise::Connection::Responder.new(v[:protocol_name], keypairs: keypairs)
           if v.key?(:init_psks) && v.key?(:resp_psks)
-            initiator.psks = v[:init_psks]
-            responder.psks = v[:resp_psks]
-            next
+            initiator.psks = v[:init_psks].map(&:htb)
+            responder.psks = v[:resp_psks].map(&:htb)
           end
 
           initiator.prologue = v[:init_prologue].htb
