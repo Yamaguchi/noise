@@ -23,5 +23,4 @@ RSpec.describe Noise::Protocol do
       it { expect { subject }.to raise_error Noise::Exceptions::ProtocolNameError }
     end
   end
-
 end

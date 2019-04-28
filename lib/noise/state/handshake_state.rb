@@ -17,7 +17,6 @@ module Noise
     # message_patterns: A sequence of message patterns.
     #     Each message pattern is a sequence of tokens from the set ("e", "s", "ee", "es", "se", "ss").
     class HandshakeState
-
       attr_reader :message_patterns, :symmetric_state
 
       def initialize(connection, protocol, initiator, prologue, keypairs)

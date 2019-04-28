@@ -5,7 +5,6 @@ begin
 rescue LoadError
 end
 
-
 module Noise
   module Functions
     module DH
@@ -24,7 +23,7 @@ module Noise
           key = ::Secp256k1::PublicKey.new(pubkey: public_key, raw: true)
           key.ecdh(private_key)
         rescue ::Secp256k1::AssertError => _
-          raise Noise::Exceptions::InvalidPublicKeyError.new(public_key)
+          raise Noise::Exceptions::InvalidPublicKeyError, public_key
         end
 
         def dhlen

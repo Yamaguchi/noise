@@ -18,7 +18,6 @@ module Noise
         @handshake_started = false
         @handshake_finished = false
         @next_message = nil
-
       end
 
       def start_handshake
@@ -78,7 +77,6 @@ module Noise
         @cipher_state_decrypt.decrypt_with_ad('', data)
       end
 
-
       def validate_psk!
         # Invalid psk length! Has to be 32 bytes long
         raise Noise::Exceptions::NoisePSKError if @psks.any? { |psk| psk.bytesize != 32 }
@@ -103,7 +101,7 @@ module Noise
         @protocol.is_psk_handshake
       end
 
-      def handshake_done(c1, c2)
+      def handshake_done(_c1, _c2)
         @handshake_hash = @symmetric_state.handshake_hash
         @handshake_state = nil
         @symmetric_state = nil

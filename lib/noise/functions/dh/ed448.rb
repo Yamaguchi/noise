@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Noise
   module Functions
     module DH
@@ -7,7 +9,7 @@ module Noise
           throw NotImplementedError
         end
 
-        def dh(key_pair, public_key)
+        def dh(_key_pair, _public_key)
           throw NotImplementedError
         end
 

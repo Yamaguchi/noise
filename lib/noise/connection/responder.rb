@@ -15,12 +15,7 @@ module Noise
       def handshake_done(c1, c2)
         super
         @cipher_state_decrypt = c1
-
-        if @protocol.pattern.one_way
-          @cipher_state_encrypt = nil
-        else
-          @cipher_state_encrypt = c2
-        end
+        @cipher_state_encrypt = @protocol.pattern.one_way ? nil : c2
       end
     end
   end
