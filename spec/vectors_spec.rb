@@ -46,9 +46,9 @@ RSpec.describe 'Vectors' do
       context "test-vector #{v[:protocol_name]}" do
         it do
           keypairs = get_keypairs(v, true)
-          initiator = Noise::Connection.new(v[:protocol_name], keypairs: keypairs)
+          initiator = Noise::Connection::Initiator.new(v[:protocol_name], keypairs: keypairs)
           keypairs = get_keypairs(v, false)
-          responder = Noise::Connection.new(v[:protocol_name], keypairs: keypairs)
+          responder = Noise::Connection::Responder.new(v[:protocol_name], keypairs: keypairs)
           if v.key?(:init_psks) && v.key?(:resp_psks)
             initiator.psks = v[:init_psks]
             responder.psks = v[:resp_psks]
@@ -56,12 +56,7 @@ RSpec.describe 'Vectors' do
           end
 
           initiator.prologue = v[:init_prologue].htb
-          initiator.set_as_initiator!
-          # set_keypairs(v, initiator)
-
           responder.prologue = v[:resp_prologue].htb
-          responder.set_as_responder!
-          # set_keypairs(v, responder)
 
           initiator.start_handshake
           responder.start_handshake

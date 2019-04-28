@@ -2,8 +2,8 @@
 
 module Noise
   class Protocol
-    attr_accessor :prologue, :initiator, :is_psk_handshake
-    attr_accessor :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn, :keypair_fn
+    attr_accessor :is_psk_handshake
+    attr_accessor :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn
     attr_reader :name, :pattern
 
     CIPHER = {
