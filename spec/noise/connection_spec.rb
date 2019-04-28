@@ -6,7 +6,7 @@ RSpec.describe Noise::Connection do
   describe '#validate' do
     subject { connection.validate }
 
-    let(:connection) { Noise::Connection.new(name, keypairs: keypairs) }
+    let(:connection) { Noise::Connection::Initiator.new(name, keypairs: keypairs) }
     let(:keypairs) { { s: nil, e: nil, rs: nil, re: nil } }
 
     context 'psk' do
@@ -15,7 +15,6 @@ RSpec.describe Noise::Connection do
         let(:keypairs) { { s: ('00' * 32).htb, e: nil, rs: nil, re: nil } }
 
         before do
-          connection.protocol.initiator = true
           connection.psks = [('00' * 32).htb, ('00' * 32).htb]
         end
         it { is_expected.to eq true }
@@ -39,16 +38,7 @@ RSpec.describe Noise::Connection do
       let(:keypairs) { { s: ('00' * 32).htb, e: nil, rs: nil, re: nil } }
 
       context 'valid' do
-        before do
-          connection.protocol.initiator = true
-        end
         it { is_expected.to eq true }
-      end
-
-      context 'not initialized' do
-        let(:keypairs) { { s: ('00' * 32).htb, e: nil, rs: nil, re: nil } }
-
-        it { expect { subject }.to raise_error(Noise::Exceptions::NoiseValidationError) }
       end
 
       context 'unmatch key pair' do
