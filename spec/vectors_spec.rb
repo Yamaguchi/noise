@@ -77,11 +77,19 @@ RSpec.describe 'Vectors' do
             else
               sender = initiator_to_responder ? initiator : responder
               receiver = initiator_to_responder ? responder : initiator
+
+              sender_message_len = sender.handshake_state.expected_message_length(message[:payload].htb.bytesize)
+              expect(sender_message_len).to eq message[:ciphertext].htb.bytesize
+
               ciphertext = sender.write_message(message[:payload].htb)
               expect(ciphertext.bth).to eq message[:ciphertext]
 
+              receiver_message_len = receiver.handshake_state.expected_message_length(message[:payload].htb.bytesize)
+              expect(receiver_message_len).to eq message[:ciphertext].htb.bytesize
+
               plaintext = receiver.read_message(message[:ciphertext].htb)
               expect(plaintext.bth).to eq message[:payload]
+
               if sender.handshake_finished && receiver.handshake_finished
                 handshake_finished = true
                 if v.key?(:handshake_hash)

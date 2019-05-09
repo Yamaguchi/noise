@@ -59,6 +59,27 @@ module Noise
         @message_patterns = @protocol.pattern.tokens.dup
       end
 
+      def expected_message_length(payload_size)
+        has_key = @symmetric_state.cipher_state.key?
+        pattern = @message_patterns.first
+        len = pattern.inject(0) do |len, token|
+          case token
+          when 'e'
+            len += @protocol.dh_fn.dhlen
+            has_key = true if @protocol.psk_handshake?
+          when 's'
+            len += @protocol.dh_fn.dhlen
+            len += 16 if has_key
+          when 'ee', 'es', 'se', 'ss', 'psk'
+            has_key = true
+          end
+          len
+        end
+        len += payload_size
+        len += 16 if has_key
+        len
+      end
+
       # Takes a payload byte sequence which may be zero-length, and a message_buffer to write the output into
       def write_message(payload, message_buffer)
         pattern = @message_patterns.shift
