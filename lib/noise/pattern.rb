@@ -12,7 +12,7 @@ module Noise
   end
 
   class Pattern
-    attr_reader :one_way, :tokens, :modifiers, :psk_count
+    attr_reader :tokens, :modifiers, :psk_count
 
     def self.create(name)
       pattern_set = name.scan(/([A-Z]+)([^A-Z]*)/)&.first
@@ -27,7 +27,6 @@ module Noise
       @pre_messages = [[], []]
       @tokens = []
       @name = ''
-      @one_way = false
       @psk_count = 0
       @modifiers = modifiers
     end
@@ -59,14 +58,14 @@ module Noise
     def required_keypairs_of_initiator
       required = []
       required << :s if %w[K X I].include?(@name[0])
-      required << :rs if @one_way || @name[1] == 'K'
+      required << :rs if one_way? || @name[1] == 'K'
       required
     end
 
     def required_keypairs_of_responder
       required = []
       required << :rs if @name[0] == 'K'
-      required << :s if @one_way || %w[K X].include?(@name[1])
+      required << :s if one_way? || %w[K X].include?(@name[1])
       required
     end
 
@@ -77,12 +76,19 @@ module Noise
     def responder_pre_messages
       @pre_messages[1].dup
     end
+
+    def one_way?
+      false
+    end
   end
 
   class OneWayPattern < Pattern
     def initialize(modifiers)
       super(modifiers)
-      @one_way = true
+    end
+
+    def one_way?
+      true
     end
   end
 

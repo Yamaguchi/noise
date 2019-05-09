@@ -65,7 +65,7 @@ RSpec.describe 'Vectors' do
           v[:messages].each do |message|
             if handshake_finished
               if message[:payload] && message[:ciphertext]
-                one_way_or_initiator = initiator.protocol.pattern.one_way || initiator_to_responder
+                one_way_or_initiator = initiator.protocol.pattern.one_way? || initiator_to_responder
                 sender = one_way_or_initiator ? initiator : responder
                 receiver = one_way_or_initiator ? responder : initiator
 
@@ -98,7 +98,7 @@ RSpec.describe 'Vectors' do
                 end
                 expect(initiator.cipher_state_encrypt.k).to eq responder.cipher_state_decrypt.k
 
-                if initiator.protocol.pattern.one_way
+                if initiator.protocol.pattern.one_way?
                   expect(initiator.cipher_state_decrypt).to be_nil
                   expect(responder.cipher_state_encrypt).to be_nil
                 else
