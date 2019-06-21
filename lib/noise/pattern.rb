@@ -15,7 +15,7 @@ module Noise
     attr_reader :tokens, :modifiers, :psk_count
 
     def self.create(name)
-      pattern_set = name.scan(/([A-Z]+)([^A-Z]*)/)&.first
+      pattern_set = name.scan(/([A-Z1]+)([^A-Z]*)/)&.first
       pattern = pattern_set&.first
       modifiers = pattern_set[1].split('+')
       class_name = "Noise::Pattern#{pattern}"
@@ -219,6 +219,207 @@ module Noise
       super(modifiers)
       @name = 'IX'
       @tokens = [[Token::E, Token::S], [Token::E, Token::EE, Token::SE, Token::S, Token::ES]]
+    end
+  end
+
+  class DeferredPattern < Pattern
+  end
+
+  class PatternNK1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'NK1'
+      @pre_messages = [[], [Token::S]]
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::ES]]
+    end
+  end
+
+  class PatternNX1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'NX1'
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::S], [Token::ES]]
+    end
+  end
+
+  class PatternX1N < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'X1N'
+      @tokens = [[Token::E], [Token::E, Token::EE], [Token::S], [Token::SE]]
+    end
+  end
+
+  class PatternX1K < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'X1K'
+      @pre_messages = [[], [Token::S]]
+      @tokens = [[Token::E, Token::ES], [Token::E, Token::EE], [Token::S], [Token::SE]]
+    end
+  end
+
+  class PatternXK1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'XK1'
+      @pre_messages = [[], [Token::S]]
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::ES], [Token::S, Token::SE]]
+    end
+  end
+
+  class PatternX1K1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'X1K1'
+      @pre_messages = [[], [Token::S]]
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::ES], [Token::S], [Token::SE]]
+    end
+  end
+
+  class PatternX1X < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'X1X'
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::S, Token::ES], [Token::S], [Token::SE]]
+    end
+  end
+
+  class PatternXX1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'XX1'
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::S], [Token::ES, Token::S, Token::SE]]
+    end
+  end
+
+  class PatternX1X1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'X1X1'
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::S], [Token::ES, Token::S], [Token::SE]]
+    end
+  end
+
+  class PatternK1N < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'K1N'
+      @pre_messages = [[Token::S], []]
+      @tokens = [[Token::E], [Token::E, Token::EE], [Token::SE]]
+    end
+  end
+
+  class PatternK1K < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'K1K'
+      @pre_messages = [[Token::S], [Token::S]]
+      @tokens = [[Token::E, Token::ES], [Token::E, Token::EE], [Token::SE]]
+    end
+  end
+
+  class PatternKK1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'KK1'
+      @pre_messages = [[Token::S], [Token::S]]
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::SE, Token::ES]]
+    end
+  end
+
+  class PatternK1K1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'K1K1'
+      @pre_messages = [[Token::S], [Token::S]]
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::ES], [Token::SE]]
+    end
+  end
+
+  class PatternK1X < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'K1X'
+      @pre_messages = [[Token::S], []]
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::S, Token::ES], [Token::SE]]
+    end
+  end
+
+  class PatternKX1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'KX1'
+      @pre_messages = [[Token::S], []]
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::SE, Token::S], [Token::ES]]
+    end
+  end
+
+  class PatternK1X1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'K1X1'
+      @pre_messages = [[Token::S], []]
+      @tokens = [[Token::E], [Token::E, Token::EE, Token::S], [Token::SE, Token::ES]]
+    end
+  end
+
+  class PatternI1N < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'I1N'
+      @tokens = [[Token::E, Token::S], [Token::E, Token::EE], [Token::SE]]
+    end
+  end
+
+  class PatternI1K < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'I1K'
+      @pre_messages = [[], [Token::S]]
+      @tokens = [[Token::E, Token::ES, Token::S], [Token::E, Token::EE], [Token::SE]]
+    end
+  end
+
+  class PatternIK1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'IK1'
+      @pre_messages = [[], [Token::S]]
+      @tokens = [[Token::E, Token::S], [Token::E, Token::EE, Token::SE, Token::ES]]
+    end
+  end
+
+  class PatternI1K1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'I1K1'
+      @pre_messages = [[], [Token::S]]
+      @tokens = [[Token::E, Token::S], [Token::E, Token::EE, Token::ES], [Token::SE]]
+    end
+  end
+
+  class PatternI1X < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'I1X'
+      @tokens = [[Token::E, Token::S], [Token::E, Token::EE, Token::S, Token::ES], [Token::SE]]
+    end
+  end
+
+  class PatternIX1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'IX1'
+      @tokens = [[Token::E, Token::S], [Token::E, Token::EE, Token::SE, Token::S], [Token::ES]]
+    end
+  end
+
+  class PatternI1X1 < DeferredPattern
+    def initialize(modifiers)
+      super(modifiers)
+      @name = 'I1X1'
+      @tokens = [[Token::E, Token::S], [Token::E, Token::EE, Token::S], [Token::SE, Token::ES]]
     end
   end
 end
