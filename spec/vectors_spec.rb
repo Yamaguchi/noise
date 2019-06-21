@@ -30,25 +30,26 @@ RSpec.describe 'Vectors' do
     keypairs
   end
 
-  files = ['cacophony.txt', 'snow-multipsk.txt', 'lightning.txt']
+  files = ['cacophony.txt', 'snow.txt', 'lightning.txt', 'noise-c-basic.txt', 'noise-c-fallback.txt', 'noise-c-hybrid.txt']
   vectors =
     files.flat_map do |file|
       path = "#{File.dirname(__FILE__)}/vectors/#{file}"
-      JSON.parse(File.read(path), symbolize_names: true)
+      JSON.parse(File.read(path), symbolize_names: true)[:vectors]
     end
 
   it { expect(vectors).not_to be_nil }
 
   describe 'test_vectors' do
     vectors.each do |v|
-      next if v[:protocol_name].include?('448')
+      protocol_name = v[:name] || v[:protocol_name]
+      next if protocol_name.include?('448')
 
-      context "test-vector #{v[:protocol_name]}" do
+      context "test-vector #{protocol_name}" do
         it do
           keypairs = get_keypairs(v, true)
-          initiator = Noise::Connection::Initiator.new(v[:protocol_name], keypairs: keypairs)
+          initiator = Noise::Connection::Initiator.new(protocol_name, keypairs: keypairs)
           keypairs = get_keypairs(v, false)
-          responder = Noise::Connection::Responder.new(v[:protocol_name], keypairs: keypairs)
+          responder = Noise::Connection::Responder.new(protocol_name, keypairs: keypairs)
           if v.key?(:init_psks) && v.key?(:resp_psks)
             initiator.psks = v[:init_psks].map(&:htb)
             responder.psks = v[:resp_psks].map(&:htb)
