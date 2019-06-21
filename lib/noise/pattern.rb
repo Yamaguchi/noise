@@ -36,6 +36,7 @@ module Noise
         if modifier.start_with?('psk')
           index = modifier.gsub(/psk/, '').to_i
           raise Noise::Exceptions::PSKValueError if index / 2 > @tokens.size
+
           if index.zero?
             @tokens[0].insert(0, Token::PSK)
           else

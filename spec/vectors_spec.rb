@@ -43,6 +43,7 @@ RSpec.describe 'Vectors' do
     vectors.each do |v|
       protocol_name = v[:name] || v[:protocol_name]
       next if protocol_name.include?('448')
+      next if protocol_name.include?('NoisePSK')
 
       context "test-vector #{protocol_name}" do
         it do
