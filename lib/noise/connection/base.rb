@@ -11,14 +11,14 @@ module Noise
       def initialize(name, keypairs: { s: nil, e: nil, rs: nil, re: nil })
         @protocol = Protocol.create(name)
 
-        @keypairs = keypairs
         # parameter keypairs[:e] and keypairs[:s] are strings, so should convert Noise::Key object.
-        @keypairs[:e] = @protocol.dh_fn.class.from_private(@keypairs[:e]) if @keypairs[:e]
-        @keypairs[:s] = @protocol.dh_fn.class.from_private(@keypairs[:s]) if @keypairs[:s]
-
+        @local_keypairs = {}
+        @local_keypairs[:e] = @protocol.dh_fn.class.from_private(keypairs[:e]) if keypairs[:e]
+        @local_keypairs[:s] = @protocol.dh_fn.class.from_private(keypairs[:s]) if keypairs[:s]
+        @remote_keys = { rs: keypairs[:rs], re: keypairs[:re] }
         @handshake_started = false
         @handshake_finished = false
-        @next_message = nil
+        initialize_next_message
       end
 
       def start_handshake
@@ -27,13 +27,24 @@ module Noise
         @handshake_started = true
       end
 
+      def fallback(fallback_name)
+        @protocol = Protocol.create(fallback_name)
+        @handshake_started = false
+        @handshake_finished = false
+        # initialize_next_message
+        @local_keypairs = { e: @handshake_state.e, s: @handshake_state.s }
+        @remote_keys = { re: @handshake_state.re, rs: @handshake_state.rs }
+        start_handshake
+      end
+
       def initialise_handshake_state
         @handshake_state = Noise::State::HandshakeState.new(
           self,
           protocol,
           initiator?,
           @prologue,
-          @keypairs
+          @local_keypairs,
+          @remote_keys
         )
         @symmetric_state = @handshake_state.symmetric_state
         @cipher_state_handshake = @symmetric_state.cipher_state
@@ -43,7 +54,6 @@ module Noise
         # Call NoiseConnection.start_handshake first
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :write
-        # Handshake finished. NoiseConnection.encrypt should be used now
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
         @next_message = :read
         buffer = +''
@@ -56,7 +66,6 @@ module Noise
         # Call NoiseConnection.start_handshake first
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :read
-        # Handshake finished. NoiseConnection.encrypt should be used now
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
 
         @next_message = :write
@@ -68,32 +77,28 @@ module Noise
 
       def encrypt(data)
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
-        # raise Noise::Exceptions::NoiseInvalidMessage
         @cipher_state_encrypt.encrypt_with_ad('', data)
       end
 
       def decrypt(data)
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
-        # raise Noise::Exceptions::NoiseInvalidMessage
         @cipher_state_decrypt.decrypt_with_ad('', data)
       end
 
       def validate_psk!
         # Invalid psk length! Has to be 32 bytes long
         raise Noise::Exceptions::NoisePSKError if @psks.any? { |psk| psk.bytesize != 32 }
-        # Bad number of PSKs provided to this protocol! {} are required,
-        # given {}'.format(self.pattern.psk_count, len(self.psks)))
         raise Noise::Exceptions::NoisePSKError if @protocol.pattern.psk_count != @psks.count
       end
 
       def valid_keypairs?
-        @protocol.pattern.required_keypairs(initiator?).any? { |keypair| !@keypairs[keypair] }
+        keypairs = @local_keypairs.merge(@remote_keys)
+        @protocol.pattern.required_keypairs(initiator?).any? { |keypair| !keypairs[keypair] }
       end
 
       def validate
         validate_psk! if psk_handshake?
 
-        # 'Keypair {} has to be set for chosen handshake pattern'.format(keypair)
         raise Noise::Exceptions::NoiseValidationError if valid_keypairs?
         true
       end

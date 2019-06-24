@@ -41,16 +41,16 @@ RSpec.describe 'Vectors' do
 
   describe 'test_vectors' do
     vectors.each do |v|
-      protocol_name = v[:name] || v[:protocol_name]
+      protocol_name = v[:protocol_name] || "Noise_#{v[:pattern]}_#{v[:dh]}_#{v[:cipher]}_#{v[:hash]}"
       next if protocol_name.include?('448')
-      next if protocol_name.include?('NoisePSK')
+      next if (v[:name] || '').include?('NoisePSK')
 
-      context "test-vector #{protocol_name}" do
+      context "test-vector #{v[:name] || protocol_name}" do
         it do
-          keypairs = get_keypairs(v, true)
-          initiator = Noise::Connection::Initiator.new(protocol_name, keypairs: keypairs)
-          keypairs = get_keypairs(v, false)
-          responder = Noise::Connection::Responder.new(protocol_name, keypairs: keypairs)
+          keypairs_init = get_keypairs(v, true)
+          initiator = Noise::Connection::Initiator.new(protocol_name, keypairs: keypairs_init)
+          keypairs_resp = get_keypairs(v, false)
+          responder = Noise::Connection::Responder.new(protocol_name, keypairs: keypairs_resp)
           if v.key?(:init_psks) && v.key?(:resp_psks)
             initiator.psks = v[:init_psks].map(&:htb)
             responder.psks = v[:resp_psks].map(&:htb)
@@ -64,10 +64,13 @@ RSpec.describe 'Vectors' do
 
           initiator_to_responder = true
           handshake_finished = false
+          fallback = v[:fallback]
+
           v[:messages].each do |message|
             if handshake_finished
               if message[:payload] && message[:ciphertext]
                 one_way_or_initiator = initiator.protocol.pattern.one_way? || initiator_to_responder
+                one_way_or_initiator = !one_way_or_initiator if v[:fallback]
                 sender = one_way_or_initiator ? initiator : responder
                 receiver = one_way_or_initiator ? responder : initiator
 
@@ -89,8 +92,20 @@ RSpec.describe 'Vectors' do
               receiver_message_len = receiver.handshake_state.expected_message_length(message[:payload].htb.bytesize)
               expect(receiver_message_len).to eq message[:ciphertext].htb.bytesize
 
-              plaintext = receiver.read_message(message[:ciphertext].htb)
-              expect(plaintext.bth).to eq message[:payload]
+              if fallback
+                begin
+                  receiver.read_message(message[:ciphertext].htb)
+                rescue StandardError => e
+                end
+
+                # Restart handshake
+                initiator.fallback(v[:name])
+                responder.fallback(v[:name])
+                fallback = false
+              else
+                plaintext = receiver.read_message(message[:ciphertext].htb)
+                expect(plaintext.bth).to eq message[:payload]
+              end
 
               if sender.handshake_finished && receiver.handshake_finished
                 handshake_finished = true

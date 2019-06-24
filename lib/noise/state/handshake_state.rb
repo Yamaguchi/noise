@@ -18,23 +18,20 @@ module Noise
     #     Each message pattern is a sequence of tokens from the set ("e", "s", "ee", "es", "se", "ss").
     class HandshakeState
       attr_reader :message_patterns, :symmetric_state
-      attr_reader :s, :rs
+      attr_reader :s, :rs, :e, :re
 
-      def initialize(connection, protocol, initiator, prologue, keypairs)
+      def initialize(connection, protocol, initiator, prologue, local_keypairs, remote_keys)
         @connection = connection
         @protocol = protocol
         @symmetric_state = SymmetricState.new
         @symmetric_state.initialize_symmetric(@protocol, connection)
         @symmetric_state.mix_hash(prologue)
         @initiator = initiator
-        @s = keypairs[:s]
-        @e = keypairs[:e]
-        @rs = keypairs[:rs]
-        @re = keypairs[:re]
+        @s = local_keypairs[:s]
+        @e = local_keypairs[:e]
+        @rs = remote_keys[:rs]
+        @re = remote_keys[:re]
 
-        # TODO : Calls MixHash() once for each public key listed in the pre-messages from  handshake_pattern, with the
-        # specified public key as input (see Section 7 for an explanation of pre-messages). If both initiator and
-        # responder have pre-messages, the initiator's public keys are hashed first.
         get_local_keypair = ->(token) { instance_variable_get('@' + token).public_key }
         get_remote_keypair = ->(token) { instance_variable_get('@r' + token) }
 
@@ -46,17 +43,24 @@ module Noise
           responder_keypair_getter = get_local_keypair
         end
 
+        # Sets message_patterns to the message patterns from handshake_pattern
+        @message_patterns = @protocol.pattern.tokens.dup
+
         @protocol.pattern.initiator_pre_messages&.map do |message|
           keypair = initiator_keypair_getter.call(message)
           @symmetric_state.mix_hash(keypair)
+        end
+
+        if @protocol.pattern.fallback
+          message = @message_patterns.delete_at(0).first
+          public_key = initiator_keypair_getter.call(message)
+          @symmetric_state.mix_hash(public_key)
         end
 
         @protocol.pattern.responder_pre_messages&.map do |message|
           keypair = responder_keypair_getter.call(message)
           @symmetric_state.mix_hash(keypair)
         end
-        # Sets message_patterns to the message patterns from handshake_pattern
-        @message_patterns = @protocol.pattern.tokens.dup
       end
 
       def expected_message_length(payload_size)

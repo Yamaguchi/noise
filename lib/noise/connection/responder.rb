@@ -3,8 +3,7 @@
 module Noise
   module Connection
     class Responder < Base
-      def initialize(name, keypairs: { s: nil, e: nil, rs: nil, re: nil })
-        super
+      def initialize_next_message
         @next_message = :read
       end
 

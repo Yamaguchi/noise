@@ -12,7 +12,7 @@ module Noise
   end
 
   class Pattern
-    attr_reader :tokens, :modifiers, :psk_count
+    attr_reader :tokens, :modifiers, :psk_count, :fallback
 
     def self.create(name)
       pattern_set = name.scan(/([A-Z1]+)([^A-Z]*)/)&.first
@@ -44,9 +44,9 @@ module Noise
           end
           @psk_count += 1
         elsif modifier == 'fallback'
-          raise NotImplementedError
+          @fallback = true
         else
-          raise Noise::Exceptions::PSKValueError
+          raise Noise::Exceptions::UnsupportedModifierError
         end
       end
     end

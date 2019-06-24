@@ -11,5 +11,6 @@ module Noise
     autoload :NoiseValidationError, 'noise/exceptions/noise_validation_error'
     autoload :NoisePSKError, 'noise/exceptions/noise_psk_error'
     autoload :PSKValueError, 'noise/exceptions/psk_value_error'
+    autoload :UnsupportedModifierError, 'noise/exceptions/unsupported_modifier_error'
   end
 end
