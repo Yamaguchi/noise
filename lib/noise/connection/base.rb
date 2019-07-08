@@ -55,6 +55,7 @@ module Noise
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :write
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
+
         @next_message = :read
         buffer = +''
         result = @handshake_state.write_message(payload, buffer)
@@ -77,11 +78,13 @@ module Noise
 
       def encrypt(data)
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
+
         @cipher_state_encrypt.encrypt_with_ad('', data)
       end
 
       def decrypt(data)
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
+
         @cipher_state_decrypt.decrypt_with_ad('', data)
       end
 
@@ -100,6 +103,7 @@ module Noise
         validate_psk! if psk_handshake?
 
         raise Noise::Exceptions::NoiseValidationError if valid_keypairs?
+
         true
       end
 

@@ -21,3 +21,6 @@ Style/WordArray:
 
 AllCops:
   TargetRubyVersion: 2.4.1
+
+Naming/UncommunicativeMethodParamName:
+    MinNameLength: 1

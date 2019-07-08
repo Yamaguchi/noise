@@ -46,8 +46,8 @@ module Noise
         # Sets message_patterns to the message patterns from handshake_pattern
         @message_patterns = @protocol.pattern.tokens.dup
 
-        @protocol.pattern.initiator_pre_messages&.map do |message|
-          keypair = initiator_keypair_getter.call(message)
+        @protocol.pattern.initiator_pre_messages&.map do |token|
+          keypair = initiator_keypair_getter.call(token)
           @symmetric_state.mix_hash(keypair)
         end
 
@@ -57,8 +57,8 @@ module Noise
           @symmetric_state.mix_hash(public_key)
         end
 
-        @protocol.pattern.responder_pre_messages&.map do |message|
-          keypair = responder_keypair_getter.call(message)
+        @protocol.pattern.responder_pre_messages&.map do |token|
+          keypair = responder_keypair_getter.call(token)
           @symmetric_state.mix_hash(keypair)
         end
       end
@@ -66,18 +66,18 @@ module Noise
       def expected_message_length(payload_size)
         has_key = @symmetric_state.cipher_state.key?
         pattern = @message_patterns.first
-        len = pattern.inject(0) do |len, token|
+        len = pattern.inject(0) do |l, token|
           case token
           when 'e'
-            len += @protocol.dh_fn.dhlen
+            l += @protocol.dh_fn.dhlen
             has_key = true if @protocol.psk_handshake?
           when 's'
-            len += @protocol.dh_fn.dhlen
-            len += 16 if has_key
+            l += @protocol.dh_fn.dhlen
+            l += 16 if has_key
           when 'ee', 'es', 'se', 'ss', 'psk'
             has_key = true
           end
-          len
+          l
         end
         len += payload_size
         len += 16 if has_key
