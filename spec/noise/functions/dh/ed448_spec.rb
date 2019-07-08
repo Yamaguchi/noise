@@ -26,6 +26,6 @@ RSpec.describe Noise::Functions::DH::ED448 do
     let(:dh) { Noise::Functions::DH::ED448.new }
     let(:alice) { dh.generate_keypair }
     let(:bob) { dh.generate_keypair }
-    it { expect(dh.dh(alice[0], bob[1])).to eq dh.dh(bob[0], alice[1]) }
+    it { expect(dh.dh(alice.private_key, bob.public_key)).to eq dh.dh(bob.private_key, alice.public_key) }
   end
 end

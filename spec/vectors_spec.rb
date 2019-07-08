@@ -30,7 +30,14 @@ RSpec.describe 'Vectors' do
     keypairs
   end
 
-  files = ['cacophony.txt', 'snow.txt', 'lightning.txt', 'noise-c-basic.txt', 'noise-c-fallback.txt', 'noise-c-hybrid.txt']
+  files = [
+    'cacophony.txt',
+    'snow.txt',
+    'lightning.txt',
+    'noise-c-basic.txt',
+    'noise-c-fallback.txt',
+    # 'noise-c-hybrid.txt'
+  ]
   vectors =
     files.flat_map do |file|
       path = "#{File.dirname(__FILE__)}/vectors/#{file}"
@@ -42,7 +49,6 @@ RSpec.describe 'Vectors' do
   describe 'test_vectors' do
     vectors.each do |v|
       protocol_name = v[:protocol_name] || "Noise_#{v[:pattern]}_#{v[:dh]}_#{v[:cipher]}_#{v[:hash]}"
-      next if protocol_name.include?('448')
       next if (v[:name] || '').include?('NoisePSK')
 
       context "test-vector #{v[:name] || protocol_name}" do
