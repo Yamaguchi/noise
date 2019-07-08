@@ -9,14 +9,10 @@ This is required for Lightning Network, layer-2 protocol for bitcoin.
 
 see https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md
 
-## Future Works
-
-The followings are not supported yet.
-
-- DH Functions
-  - Curve448
-
 ## Installation
+
+This gem needs libsodium and libgoldilocks library.
+To install these library, see https://github.com/jedisct1/libsodium and https://github.com/otrv4/libgoldilocks
 
 Add this line to your application's Gemfile:
 
