@@ -12,6 +12,8 @@ module Noise
           cipher.iv = nonce_to_bytes(n)
           cipher.auth_data = ad
           cipher.update(plaintext) + cipher.final + cipher.auth_tag
+        rescue OpenSSL::Cipher::CipherError => e
+          raise Noise::Exceptions::EncryptError.new(e)
         end
 
         def decrypt(k, n, ad, ciphertext)
@@ -21,6 +23,8 @@ module Noise
           cipher.auth_data = ad
           cipher.auth_tag = ciphertext[-16..-1]
           cipher.update(ciphertext[0...-16]) + cipher.final
+        rescue OpenSSL::Cipher::CipherError => e
+          raise Noise::Exceptions::DecryptError.new(e)
         end
 
         def nonce_to_bytes(n)

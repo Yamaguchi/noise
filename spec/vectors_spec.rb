@@ -96,6 +96,7 @@ RSpec.describe 'Vectors' do
                 begin
                   receiver.read_message(message[:ciphertext].htb)
                 rescue StandardError => e
+                  expect(e).to be_kind_of Noise::Exceptions::DecryptError
                 end
 
                 # Restart handshake
