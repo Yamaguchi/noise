@@ -29,8 +29,8 @@ Supported Features:
 
 ## Installation
 
-This gem needs libsodium and libgoldilocks library.
-To install these library, see https://github.com/jedisct1/libsodium and https://github.com/otrv4/libgoldilocks
+This gem needs libsodium library.
+To install libsodium, see https://github.com/jedisct1/libsodium
 
 Add this line to your application's Gemfile:
 
@@ -45,6 +45,17 @@ And then execute:
 Or install it yourself as:
 
     $ gem install noise-ruby
+
+If you use Ed448 as DH function, you must install [libgoldilocks](https://github.com/otrv4/libgoldilocks)
+After installing, define an environment variable as follows:
+
+   * on macOS
+      
+         $ export LIBGOLDILOCKS=/usr/local/lib/libgoldilocks.dylib
+
+   * on Linux(Ubuntu)
+   
+         $ export LIBGOLDILOCKS=/usr/local/lib/libgoldilocks.so
 
 If you use Secp256k1, you must install [libsecp256k1](https://github.com/bitcoin-core/secp256k1).
 
