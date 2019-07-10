@@ -2,12 +2,30 @@
 
 A Ruby implementation of the Noise Protocol framework(http://noiseprotocol.org/).
 
-## Secp256k1
+Supported Features:
 
-Secp256k1 cipher function is supported.
-This is required for Lightning Network, layer-2 protocol for bitcoin.
-
-see https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md
+* DH Functions
+    * ED25519
+    * ED448
+    * Secp256k1
+        * Secp256k1 is required for Lightning Network, layer-2 protocol for bitcoin. see [BOLT #8: Encrypted and Authenticated Transport](https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md)
+* Cipher Algorithm
+    * ChaCha20-Poly1305
+    * AES-GCM
+* Hash Functions
+    * SHA256
+    * SHA512
+    * BLAKE2s
+    * BLAKE2b
+* Pattens
+    * One-way Patterns(3)
+        * N, K, X
+    * Fundamental Interactive Patterns(12)
+        * NN, KN, NK, KK, NX, KX, XN, IN, XK, IK, XX, IX
+    * Defferred Interactive Patterns(23)
+        * NK1, NX1, X1N, X1K, XK1, X1K1, X1X, XX1, X1X1, K1N, K1K, KK1, K1K1,K1X, KX1, K1X1, I1N, I1K, IK1, I1K1, I1X, IX1, I1X1
+* Fallback
+* PSK
 
 ## Installation
 
@@ -74,24 +92,25 @@ cipher = responder.write_message("") # => "\v\xD9\x97'\xC0\xB1\xC9\xFFD\x8C\x7F\
 ```
 
 
-### initiator
+#### initiator
 
 ```
 plain = initiator.read_message(cipher) # => ""
 ```
 
-### Send transport message (after handshake finished)
+### Transport (after handshake finished)
+
+#### Send transport message 
 
 ```
 cipher = initiator.encrypt("Hello, World!") # => "\xDA\xC7\xD7as\v\xFA\xCC,\xB3\xC7\xD0/xL\xE8I,\xD9\n\xEExh\x8F\xFA\xD6\x01\x99W"
 ```
 
-### Receive transport message
+#### Receive transport message
 
 ```
 plain = responder.decrypt(cipher) # => "Hello, World!"
 ```
-
 
 ## Development
 
