@@ -46,7 +46,8 @@ Or install it yourself as:
 
     $ gem install noise-ruby
 
-If you use Ed448 as DH function, you must install [libgoldilocks](https://github.com/otrv4/libgoldilocks)
+If you use Ed448 as DH function, you must install [libgoldilocks](https://github.com/otrv4/libgoldilocks).
+
 After installing, define an environment variable as follows:
 
    * on macOS
