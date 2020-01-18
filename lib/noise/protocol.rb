@@ -21,7 +21,8 @@ module Noise
       'BLAKE2b': Noise::Functions::Hash::Blake2b,
       'BLAKE2s': Noise::Functions::Hash::Blake2s,
       'SHA256': Noise::Functions::Hash::Sha256,
-      'SHA512': Noise::Functions::Hash::Sha512
+      'SHA512': Noise::Functions::Hash::Sha512,
+      'BLAKE3': Noise::Functions::Hash::Blake3,
     }.stringify_keys.freeze
 
     def self.create(name)

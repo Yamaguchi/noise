@@ -17,6 +17,7 @@ Supported Features:
     * SHA512
     * BLAKE2s
     * BLAKE2b
+    * BLAKE3
 * Pattens
     * One-way Patterns(3)
         * N, K, X
@@ -51,11 +52,11 @@ If you use Ed448 as DH function, you must install [libgoldilocks](https://github
 After installing, define an environment variable as follows:
 
    * on macOS
-      
+
          $ export LIBGOLDILOCKS=/usr/local/lib/libgoldilocks.dylib
 
    * on Linux(Ubuntu)
-   
+
          $ export LIBGOLDILOCKS=/usr/local/lib/libgoldilocks.so
 
 If you use Secp256k1, you must install [libsecp256k1](https://github.com/bitcoin-core/secp256k1).
@@ -73,6 +74,13 @@ and, add this line to your Gemfile:
 gem 'secp256k1-ruby'
 ```
 
+If you use BLAKE3, you must install [Rust and Cargo](https://www.rust-lang.org/tools/install).
+And add this line to your Gemfile:
+
+```
+gem 'blake3'
+```
+
 ## Usage
 
 Followings shows handshake protocol with "Noise_NN_25519_ChaChaPoly_BLAKE2b"
@@ -88,12 +96,12 @@ initiator.start_handshake # => true
 cipher = initiator.write_message("") # => "\xB6\xF7gmxi\xAB\xBCY|t\xF0\x9D\x01A\ad\x92\xBBvp\x80ZNU\f=\x83\x81^\xFD\x15"
 ```
 
-then initiator sends `cipher` to responder.
+then initiator sends `cipher` to the responder.
 
 #### responder
 
-Responder receive `cipher` from initiator.
-Responder respond messages to initiator.
+The responder receives `cipher` from the initiator.
+The responder responds messages to the initiator.
 
 ```
 responder = Noise::Connection::Responder.new("Noise_NN_25519_ChaChaPoly_BLAKE2b")
@@ -112,7 +120,7 @@ plain = initiator.read_message(cipher) # => ""
 
 ### Transport (after handshake finished)
 
-#### Send transport message 
+#### Send transport message
 
 ```
 cipher = initiator.encrypt("Hello, World!") # => "\xDA\xC7\xD7as\v\xFA\xCC,\xB3\xC7\xD0/xL\xE8I,\xD9\n\xEExh\x8F\xFA\xD6\x01\x99W"

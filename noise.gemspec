@@ -21,13 +21,14 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
+  spec.add_development_dependency 'blake3'
   spec.add_development_dependency 'bundler', '~> 1.15'
   spec.add_development_dependency 'rake', '~> 10.0'
   spec.add_development_dependency 'rspec', '~> 3.0'
   spec.add_development_dependency 'secp256k1-ruby'
 
   spec.add_runtime_dependency 'ecdsa'
+  spec.add_runtime_dependency 'ed448'
   spec.add_runtime_dependency 'rbnacl'
   spec.add_runtime_dependency 'ruby-hmac'
-  spec.add_runtime_dependency 'ed448'
 end

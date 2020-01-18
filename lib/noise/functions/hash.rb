@@ -7,6 +7,7 @@ module Noise
       autoload :Blake2s, 'noise/functions/hash/blake2s'
       autoload :Sha256, 'noise/functions/hash/sha256'
       autoload :Sha512, 'noise/functions/hash/sha512'
+      autoload :Blake3, 'noise/functions/hash/blake3'
 
       def self.hmac_hash(key, data, digest)
         if digest.include?('SHA')
@@ -15,6 +16,8 @@ module Noise
           Noise::Functions::Hash::Blake2bHMAC.new(key).update(data).digest
         elsif digest.include?('BLAKE2s')
           Noise::Functions::Hash::Blake2sHMAC.new(key).update(data).digest
+        elsif digest.include?('BLAKE3')
+          Noise::Functions::Hash::Blake3HMAC.new(key).update(data).digest
         end
       end
 
