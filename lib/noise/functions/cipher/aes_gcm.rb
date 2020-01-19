@@ -13,7 +13,7 @@ module Noise
           cipher.auth_data = ad
           cipher.update(plaintext) + cipher.final + cipher.auth_tag
         rescue OpenSSL::Cipher::CipherError => e
-          raise Noise::Exceptions::EncryptError.new(e)
+          raise Noise::Exceptions::EncryptError, "Encrypt failed. #{e.message}", e.backtrace
         end
 
         def decrypt(k, n, ad, ciphertext)
@@ -24,7 +24,7 @@ module Noise
           cipher.auth_tag = ciphertext[-16..-1]
           cipher.update(ciphertext[0...-16]) + cipher.final
         rescue OpenSSL::Cipher::CipherError => e
-          raise Noise::Exceptions::DecryptError.new(e)
+          raise Noise::Exceptions::DecryptError, "Decrpyt failed. #{e.message}", e.backtrace
         end
 
         def nonce_to_bytes(n)

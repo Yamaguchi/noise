@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 
-begin
-  require 'blake3'
-rescue LoadError
-end
+require_force 'blake3'
 
 module Noise
   module Functions

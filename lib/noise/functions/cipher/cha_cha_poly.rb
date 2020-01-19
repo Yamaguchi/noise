@@ -10,14 +10,14 @@ module Noise
           cipher = RbNaCl::AEAD::ChaCha20Poly1305IETF.new(String.new(k).force_encoding('ASCII-8BIT'))
           cipher.encrypt(nonce_to_bytes(n), plaintext, ad)
         rescue ::RbNaCl::CryptoError => e
-          raise Noise::Exceptions::EncryptError.new(e)
+          raise Noise::Exceptions::EncryptError, "Encrypt failed. #{e.message}", e.backtrace
         end
 
         def decrypt(k, n, ad, ciphertext)
           cipher = RbNaCl::AEAD::ChaCha20Poly1305IETF.new(String.new(k).force_encoding('ASCII-8BIT'))
           cipher.decrypt(nonce_to_bytes(n), ciphertext, ad)
         rescue ::RbNaCl::CryptoError => e
-          raise Noise::Exceptions::DecryptError.new(e)
+          raise Noise::Exceptions::DecryptError, "Decrpyt failed. #{e.message}", e.backtrace
         end
 
         def nonce_to_bytes(n)

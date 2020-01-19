@@ -40,7 +40,6 @@ module Noise
       def initialise_handshake_state
         @handshake_state = Noise::State::HandshakeState.new(
           self,
-          protocol,
           initiator?,
           @prologue,
           @local_keypairs,
@@ -100,15 +99,11 @@ module Noise
       end
 
       def validate
-        validate_psk! if psk_handshake?
+        validate_psk! if @protocol.psk?
 
         raise Noise::Exceptions::NoiseValidationError if valid_keypairs?
 
         true
-      end
-
-      def psk_handshake?
-        @protocol.is_psk_handshake
       end
 
       def handshake_done(_c1, _c2)

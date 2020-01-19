@@ -11,13 +11,17 @@ module Noise
       attr_reader :h, :ck
       attr_reader :cipher_state
 
-      def initialize_symmetric(protocol, connection)
+      def initialize(protocol, connection)
         @protocol = protocol
         @connection = connection
         @ck = @h = initialize_h(protocol)
 
         @cipher_state = CipherState.new(cipher: @protocol.cipher_fn)
         @cipher_state.initialize_key(nil)
+      end
+
+      def self.initialize_symmetric(protocol, connection, prologue: nil)
+        new(protocol, connection).tap { |s| s.mix_hash(prologue) if prologue }
       end
 
       def mix_key(input_key_meterial)

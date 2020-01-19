@@ -2,7 +2,6 @@
 
 module Noise
   class Protocol
-    attr_accessor :is_psk_handshake
     attr_accessor :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn
     attr_reader :name, :pattern
 
@@ -22,7 +21,7 @@ module Noise
       'BLAKE2s': Noise::Functions::Hash::Blake2s,
       'SHA256': Noise::Functions::Hash::Sha256,
       'SHA512': Noise::Functions::Hash::Sha512,
-      'BLAKE3': Noise::Functions::Hash::Blake3,
+      'BLAKE3': Noise::Functions::Hash::Blake3
     }.stringify_keys.freeze
 
     def self.create(name)
@@ -35,8 +34,6 @@ module Noise
       @name = name
       @pattern = Noise::Pattern.create(pattern_name)
       @hkdf_fn = Noise::Functions::Hash.create_hkdf_fn(hash_name)
-      @is_psk_handshake = @pattern.modifiers.any? { |m| m.start_with?('psk') }
-
       @pattern.apply_pattern_modifiers
 
       initialize_fn!(cipher_name, hash_name, dh_name)
@@ -49,8 +46,8 @@ module Noise
       raise Noise::Exceptions::ProtocolNameError unless @cipher_fn && @hash_fn && @dh_fn
     end
 
-    def psk_handshake?
-      @is_psk_handshake
+    def psk?
+      @pattern.psk?
     end
   end
 end

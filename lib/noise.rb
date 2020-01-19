@@ -3,6 +3,7 @@
 require 'noise/version'
 
 require 'ecdsa'
+require 'logger'
 require 'rbnacl'
 require 'ruby_hmac'
 require 'securerandom'
@@ -19,4 +20,15 @@ module Noise
   autoload :Exceptions, 'noise/exceptions'
   autoload :Functions, 'noise/functions'
   autoload :State, 'noise/state'
+
+  def self.logger
+    @logger ||= Logger.new(STDOUT)
+  end
+end
+
+def require_force(name)
+  require name
+  yield if block_given?
+rescue LoadError => e
+  Noise.logger.warn(e.message)
 end

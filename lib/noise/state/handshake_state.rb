@@ -20,45 +20,58 @@ module Noise
       attr_reader :message_patterns, :symmetric_state
       attr_reader :s, :rs, :e, :re
 
-      def initialize(connection, protocol, initiator, prologue, local_keypairs, remote_keys)
+      def initialize(connection, initiator, prologue, local_keypairs, remote_keys)
         @connection = connection
-        @protocol = protocol
-        @symmetric_state = SymmetricState.new
-        @symmetric_state.initialize_symmetric(@protocol, connection)
-        @symmetric_state.mix_hash(prologue)
+        @protocol = connection.protocol
+        @symmetric_state = SymmetricState.initialize_symmetric(@protocol, connection, prologue: prologue)
         @initiator = initiator
         @s = local_keypairs[:s]
         @e = local_keypairs[:e]
         @rs = remote_keys[:rs]
         @re = remote_keys[:re]
 
-        get_local_keypair = ->(token) { instance_variable_get('@' + token).public_key }
-        get_remote_keypair = ->(token) { instance_variable_get('@r' + token) }
-
         if initiator
-          initiator_keypair_getter = get_local_keypair
-          responder_keypair_getter = get_remote_keypair
+          initiator_keypair_getter = local_keypair_getter
+          responder_keypair_getter = remote_keypair_getter
         else
-          initiator_keypair_getter = get_remote_keypair
-          responder_keypair_getter = get_local_keypair
+          initiator_keypair_getter = remote_keypair_getter
+          responder_keypair_getter = local_keypair_getter
         end
 
         # Sets message_patterns to the message patterns from handshake_pattern
         @message_patterns = @protocol.pattern.tokens.dup
 
+        process_initiator_pre_messages(initiator_keypair_getter)
+        process_fallback(initiator_keypair_getter)
+        process_responder_pre_messages(responder_keypair_getter)
+      end
+
+      def local_keypair_getter
+        ->(token) { instance_variable_get('@' + token).public_key }
+      end
+
+      def remote_keypair_getter
+        ->(token) { instance_variable_get('@r' + token) }
+      end
+
+      def process_initiator_pre_messages(keypair_getter)
         @protocol.pattern.initiator_pre_messages&.map do |token|
-          keypair = initiator_keypair_getter.call(token)
+          keypair = keypair_getter.call(token)
           @symmetric_state.mix_hash(keypair)
         end
+      end
 
-        if @protocol.pattern.fallback
-          message = @message_patterns.delete_at(0).first
-          public_key = initiator_keypair_getter.call(message)
-          @symmetric_state.mix_hash(public_key)
-        end
+      def process_fallback(initiator_keypair_getter)
+        return unless @protocol.pattern.fallback
 
+        message = @message_patterns.delete_at(0).first
+        public_key = initiator_keypair_getter.call(message)
+        @symmetric_state.mix_hash(public_key)
+      end
+
+      def process_responder_pre_messages(keypair_getter)
         @protocol.pattern.responder_pre_messages&.map do |token|
-          keypair = responder_keypair_getter.call(token)
+          keypair = keypair_getter.call(token)
           @symmetric_state.mix_hash(keypair)
         end
       end
@@ -70,7 +83,7 @@ module Noise
           case token
           when 'e'
             l += @protocol.dh_fn.dhlen
-            has_key = true if @protocol.psk_handshake?
+            has_key = true if @protocol.psk?
           when 's'
             l += @protocol.dh_fn.dhlen
             l += 16 if has_key
@@ -95,7 +108,7 @@ module Noise
             @e = dh_fn.generate_keypair if @e.nil?
             message_buffer << @e.public_key
             @symmetric_state.mix_hash(@e.public_key)
-            @symmetric_state.mix_key(@e.public_key) if @protocol.psk_handshake?
+            @symmetric_state.mix_key(@e.public_key) if @protocol.psk?
           when 's'
             message_buffer << @symmetric_state.encrypt_and_hash(@s.public_key)
           when 'ee'
@@ -125,10 +138,10 @@ module Noise
         pattern.each do |token|
           case token
           when 'e'
-            @re = message[0...len] if @re.nil?
+            @re ||= message[0...len]
             message = message[len..-1]
             @symmetric_state.mix_hash(@re)
-            @symmetric_state.mix_key(@re) if @protocol.psk_handshake?
+            @symmetric_state.mix_key(@re) if @protocol.psk?
           when 's'
             offset = @connection.cipher_state_handshake.key? ? 16 : 0
             temp = message[0...len + offset]

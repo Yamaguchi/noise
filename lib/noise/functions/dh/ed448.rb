@@ -1,10 +1,6 @@
 # frozen_string_literal: true
 
-begin
-  require 'ed448'
-  Ed448.init
-rescue LoadError
-end
+require_force('ed448') { Ed448.init }
 
 module Noise
   module Functions

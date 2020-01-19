@@ -11,13 +11,36 @@ module Noise
     PSK = 'psk'
   end
 
+  module Modifier
+    class Psk
+      attr_reader :index
+      def initialize(index)
+        @index = index
+      end
+    end
+
+    class Fallback
+    end
+
+    def self.parse(s)
+      if s.start_with?('psk')
+        index = s.gsub(/psk/, '').to_i
+        Modifier::Psk.new(index)
+      elsif s == 'fallback'
+        Modifier::Fallback.new
+      else
+        raise Noise::Exceptions::UnsupportedModifierError
+      end
+    end
+  end
+
   class Pattern
     attr_reader :tokens, :modifiers, :psk_count, :fallback
 
     def self.create(name)
       pattern_set = name.scan(/([A-Z1]+)([^A-Z]*)/)&.first
       pattern = pattern_set&.first
-      modifiers = pattern_set[1].split('+')
+      modifiers = pattern_set[1].split('+').map { |s| Modifier.parse(s) }
       class_name = "Noise::Pattern#{pattern}"
       klass = Object.const_get(class_name)
       klass.new(modifiers)
@@ -31,10 +54,15 @@ module Noise
       @modifiers = modifiers
     end
 
+    def psk?
+      modifiers.any? { |m| m.is_a? Modifier::Psk }
+    end
+
     def apply_pattern_modifiers
       @modifiers.each do |modifier|
-        if modifier.start_with?('psk')
-          index = modifier.gsub(/psk/, '').to_i
+        case modifier
+        when Modifier::Psk
+          index = modifier.index
           raise Noise::Exceptions::PSKValueError if index / 2 > @tokens.size
 
           if index.zero?
@@ -43,10 +71,8 @@ module Noise
             @tokens[index - 1] << Token::PSK
           end
           @psk_count += 1
-        elsif modifier == 'fallback'
+        when Modifier::Fallback
           @fallback = true
-        else
-          raise Noise::Exceptions::UnsupportedModifierError
         end
       end
     end

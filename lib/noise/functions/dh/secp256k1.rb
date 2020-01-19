@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 
-begin
-  require 'secp256k1'
-rescue LoadError
-end
+require_force 'secp256k1'
 
 module Noise
   module Functions
