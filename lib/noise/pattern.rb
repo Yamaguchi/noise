@@ -2,13 +2,76 @@
 
 module Noise
   module Token
-    E = 'e'
-    S = 's'
-    EE = 'ee'
-    ES = 'es'
-    SE = 'se'
-    SS = 'ss'
-    PSK = 'psk'
+    class TokenE
+      def to_s
+        'e'
+      end
+    end
+
+    class TokenS
+      def to_s
+        's'
+      end
+    end
+
+    class TokenDH
+      def mix(symmetric_state, dh_fn, initiator, keypair)
+        private_key, public_key = get_key(keypair, initiator)
+        symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
+      end
+    end
+
+    class TokenEE < TokenDH
+      def get_key(keypair, _initiator)
+        [keypair.e.private_key, keypair.re]
+      end
+
+      def to_s
+        'ee'
+      end
+    end
+
+    class TokenES < TokenDH
+      def get_key(keypair, initiator)
+        initiator ? [keypair.e.private_key, keypair.rs] : [keypair.s.private_key, keypair.re]
+      end
+
+      def to_s
+        'es'
+      end
+    end
+
+    class TokenSE < TokenDH
+      def get_key(keypair, initiator)
+        initiator ? [keypair.s.private_key, keypair.re] : [keypair.e.private_key, keypair.rs]
+      end
+
+      def to_s
+        'se'
+      end
+    end
+    class TokenSS < TokenDH
+      def get_key(keypair, _initiator)
+        [keypair.s.private_key, keypair.rs]
+      end
+
+      def to_s
+        'ss'
+      end
+    end
+    class TokenPSK
+      def to_s
+        'psk'
+      end
+    end
+
+    E = TokenE.new
+    S = TokenS.new
+    EE = TokenEE.new
+    ES = TokenES.new
+    SE = TokenSE.new
+    SS = TokenSS.new
+    PSK = TokenPSK.new
   end
 
   module Modifier

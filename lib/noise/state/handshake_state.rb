@@ -30,13 +30,7 @@ module Noise
         @rs = remote_keys[:rs]
         @re = remote_keys[:re]
 
-        if initiator
-          initiator_keypair_getter = local_keypair_getter
-          responder_keypair_getter = remote_keypair_getter
-        else
-          initiator_keypair_getter = remote_keypair_getter
-          responder_keypair_getter = local_keypair_getter
-        end
+        initiator_keypair_getter, responder_keypair_getter = get_keypair_getter(initiator)
 
         # Sets message_patterns to the message patterns from handshake_pattern
         @message_patterns = @protocol.pattern.tokens.dup
@@ -46,12 +40,20 @@ module Noise
         process_responder_pre_messages(responder_keypair_getter)
       end
 
+      def get_keypair_getter(initiator)
+        if initiator
+          [local_keypair_getter, remote_keypair_getter]
+        else
+          [remote_keypair_getter, local_keypair_getter]
+        end
+      end
+
       def local_keypair_getter
-        ->(token) { instance_variable_get('@' + token).public_key }
+        ->(token) { instance_variable_get('@' + token.to_s).public_key }
       end
 
       def remote_keypair_getter
-        ->(token) { instance_variable_get('@r' + token) }
+        ->(token) { instance_variable_get('@r' + token.to_s) }
       end
 
       def process_initiator_pre_messages(keypair_getter)
@@ -81,13 +83,13 @@ module Noise
         pattern = @message_patterns.first
         len = pattern.inject(0) do |l, token|
           case token
-          when 'e'
+          when Noise::Token::E
             l += @protocol.dh_fn.dhlen
             has_key = true if @protocol.psk?
-          when 's'
+          when Noise::Token::S
             l += @protocol.dh_fn.dhlen
             l += 16 if has_key
-          when 'ee', 'es', 'se', 'ss', 'psk'
+          else
             has_key = true
           end
           l
@@ -100,29 +102,19 @@ module Noise
       # Takes a payload byte sequence which may be zero-length, and a message_buffer to write the output into
       def write_message(payload, message_buffer)
         pattern = @message_patterns.shift
-        dh_fn = @protocol.dh_fn
 
         pattern.each do |token|
           case token
-          when 'e'
-            @e = dh_fn.generate_keypair if @e.nil?
+          when Noise::Token::E
+            @e ||= dh_fn.generate_keypair
             message_buffer << @e.public_key
-            @symmetric_state.mix_hash(@e.public_key)
-            @symmetric_state.mix_key(@e.public_key) if @protocol.psk?
-          when 's'
+            mix_e(@e.public_key)
+          when Noise::Token::S
             message_buffer << @symmetric_state.encrypt_and_hash(@s.public_key)
-          when 'ee'
-            @symmetric_state.mix_key(dh_fn.dh(@e.private_key, @re))
-          when 'es'
-            private_key, public_key = @initiator ? [@e.private_key, @rs] : [@s.private_key, @re]
-            @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
-          when 'se'
-            private_key, public_key = @initiator ? [@s.private_key, @re] : [@e.private_key, @rs]
-            @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
-          when 'ss'
-            @symmetric_state.mix_key(dh_fn.dh(@s.private_key, @rs))
-          when 'psk'
-            @symmetric_state.mix_key_and_hash(@connection.psks.shift)
+          when Noise::Token::EE, Noise::Token::ES, Noise::Token::SE, Noise::Token::SS
+            token.mix(@symmetric_state, @protocol.dh_fn, @initiator, self)
+          when Noise::Token::PSK
+            mix_psk
           end
         end
         message_buffer << @symmetric_state.encrypt_and_hash(payload)
@@ -133,36 +125,47 @@ module Noise
       # and a payload_buffer to write the message's plaintext payload into
       def read_message(message, payload_buffer)
         pattern = @message_patterns.shift
-        dh_fn = @protocol.dh_fn
-        len = dh_fn.dhlen
         pattern.each do |token|
           case token
-          when 'e'
-            @re ||= message[0...len]
-            message = message[len..-1]
-            @symmetric_state.mix_hash(@re)
-            @symmetric_state.mix_key(@re) if @protocol.psk?
-          when 's'
-            offset = @connection.cipher_state_handshake.key? ? 16 : 0
-            temp = message[0...len + offset]
-            message = message[(len + offset)..-1]
-            @rs = @symmetric_state.decrypt_and_hash(temp)
-          when 'ee'
-            @symmetric_state.mix_key(dh_fn.dh(@e.private_key, @re))
-          when 'es'
-            private_key, public_key = @initiator ? [@e.private_key, @rs] : [@s.private_key, @re]
-            @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
-          when 'se'
-            private_key, public_key = @initiator ? [@s.private_key, @re] : [@e.private_key, @rs]
-            @symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
-          when 'ss'
-            @symmetric_state.mix_key(dh_fn.dh(@s.private_key, @rs))
-          when 'psk'
-            @symmetric_state.mix_key_and_hash(@connection.psks.shift)
+          when Noise::Token::E
+            message, re = extract_key(message, false)
+            @re ||= re
+            mix_e(@re)
+          when Noise::Token::S
+            message, @rs = extract_key(message, true)
+          when Noise::Token::EE, Noise::Token::ES, Noise::Token::SE, Noise::Token::SS
+            token.mix(@symmetric_state, @protocol.dh_fn, @initiator, self)
+          when Noise::Token::PSK
+            mix_psk
           end
         end
         payload_buffer << @symmetric_state.decrypt_and_hash(message)
         @symmetric_state.split if @message_patterns.empty?
+      end
+
+      private
+
+      def extract_key(message, is_encrypted)
+        len = @protocol.dh_fn.dhlen
+        offset =
+          if is_encrypted && @connection.cipher_state_handshake.key?
+            16
+          else
+            0
+          end
+        key = message[0...len + offset]
+        message = message[(len + offset)..-1]
+        key = @symmetric_state.decrypt_and_hash(key) if is_encrypted
+        [message, key]
+      end
+
+      def mix_e(public_key)
+        @symmetric_state.mix_hash(public_key)
+        @symmetric_state.mix_key(public_key) if @protocol.psk?
+      end
+
+      def mix_psk
+        @symmetric_state.mix_key_and_hash(@connection.psks.shift)
       end
     end
   end
