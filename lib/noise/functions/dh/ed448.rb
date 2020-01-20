@@ -6,6 +6,8 @@ module Noise
   module Functions
     module DH
       class ED448
+        include Noise::Functions::DH::Kem::ED448
+
         DHLEN = Ed448::X448::X448_PRIVATE_BYTES
 
         def generate_keypair

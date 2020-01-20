@@ -5,6 +5,7 @@ module Noise
     module DH
       autoload :ED448, 'noise/functions/dh/ed448'
       autoload :ED25519, 'noise/functions/dh/ed25519'
+      autoload :Kem, 'noise/functions/dh/kem'
       autoload :Secp256k1, 'noise/functions/dh/secp256k1'
     end
   end

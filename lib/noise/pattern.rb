@@ -50,6 +50,7 @@ module Noise
         'se'
       end
     end
+
     class TokenSS < TokenDH
       def get_key(keypair, _initiator)
         [keypair.s.private_key, keypair.rs]
@@ -59,9 +60,22 @@ module Noise
         'ss'
       end
     end
+
     class TokenPSK
       def to_s
         'psk'
+      end
+    end
+
+    class TokenE1
+      def to_s
+        'e1'
+      end
+    end
+
+    class TokenEKEM1
+      def to_s
+        'ekem1'
       end
     end
 
@@ -72,6 +86,8 @@ module Noise
     SE = TokenSE.new
     SS = TokenSS.new
     PSK = TokenPSK.new
+    E1 = TokenE1.new
+    EKEM1 = TokenEKEM1.new
   end
 
   module Modifier
@@ -85,12 +101,18 @@ module Noise
     class Fallback
     end
 
+    class Hybrid
+      attr_accessor :hybrid_fn
+    end
+
     def self.parse(s)
       if s.start_with?('psk')
         index = s.gsub(/psk/, '').to_i
         Modifier::Psk.new(index)
       elsif s == 'fallback'
         Modifier::Fallback.new
+      elsif s.include?('hfs')
+        Modifier::Hybrid.new
       else
         raise Noise::Exceptions::UnsupportedModifierError
       end
@@ -106,7 +128,7 @@ module Noise
       modifiers = pattern_set[1].split('+').map { |s| Modifier.parse(s) }
       class_name = "Noise::Pattern#{pattern}"
       klass = Object.const_get(class_name)
-      klass.new(modifiers)
+      klass.new(modifiers).tap { |p| p.apply_hybrid if p.hybrid? }
     end
 
     def initialize(modifiers)
@@ -119,6 +141,26 @@ module Noise
 
     def psk?
       modifiers.any? { |m| m.is_a? Modifier::Psk }
+    end
+
+    def hybrid?
+      modifiers.any? { |m| m.is_a? Modifier::Hybrid }
+    end
+
+    def apply_hybrid
+      tokens.each do |token|
+        next unless token.include?(Token::E)
+        index = token.index(Token::E)
+        token.insert(index + 1, Token::E1)
+        break
+      end
+
+      tokens.each do |token|
+        next unless token.include?(Token::EE)
+        index = token.index(Token::EE)
+        token.insert(index + 1, Token::EKEM1)
+        break
+      end
     end
 
     def apply_pattern_modifiers

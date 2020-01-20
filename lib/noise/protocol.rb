@@ -2,7 +2,7 @@
 
 module Noise
   class Protocol
-    attr_accessor :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn
+    attr_accessor :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn, :hybrid_fn
     attr_reader :name, :pattern
 
     CIPHER = {
@@ -32,17 +32,26 @@ module Noise
 
     def initialize(name, pattern_name, cipher_name, hash_name, dh_name)
       @name = name
+      dh_name, kem =
+        if dh_name.include?('+')
+          dh_name.split('+')
+        else
+          [dh_name, nil]
+        end
+
       @pattern = Noise::Pattern.create(pattern_name)
       @hkdf_fn = Noise::Functions::Hash.create_hkdf_fn(hash_name)
       @pattern.apply_pattern_modifiers
 
-      initialize_fn!(cipher_name, hash_name, dh_name)
+      initialize_fn!(cipher_name, hash_name, dh_name, hybrid: kem)
     end
 
-    def initialize_fn!(cipher_name, hash_name, dh_name)
+    def initialize_fn!(cipher_name, hash_name, dh_name, hybrid: nil)
       @cipher_fn = CIPHER[cipher_name]&.new
       @hash_fn = HASH[hash_name]&.new
       @dh_fn = DH[dh_name]&.new
+      @hybrid_fn = DH[hybrid]&.new if hybrid
+      pp self
       raise Noise::Exceptions::ProtocolNameError unless @cipher_fn && @hash_fn && @dh_fn
     end
 

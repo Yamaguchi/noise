@@ -115,6 +115,16 @@ module Noise
             token.mix(@symmetric_state, @protocol.dh_fn, @initiator, self)
           when Noise::Token::PSK
             mix_psk
+          when Noise::Token::E1
+            keypair ||= @protocol.hybrid_fn.generate_kem_keypair
+            message_buffer << @symmetric_state.encrypt_and_hash(keypair.public_key)
+          when Noise::Token::EKEM1
+            ciphertext, kem_output = @protocol.hybrid_fn.generate_kem_ciphertext(@rs)
+            message_buffer << @symmetric_state.encrypt_and_hash(ciphertext)
+            @symmetric_state.mix_key(kem_output)
+
+            # private_key, public_key = get_key(keypair, initiator)
+            # symmetric_state.mix_key(dh_fn.dh(private_key, public_key))
           end
         end
         message_buffer << @symmetric_state.encrypt_and_hash(payload)
@@ -137,6 +147,11 @@ module Noise
             token.mix(@symmetric_state, @protocol.dh_fn, @initiator, self)
           when Noise::Token::PSK
             mix_psk
+          when Noise::Token::E1
+            Noise.logger.warn("Invalid token")
+          when Noise::Token::EKEM1
+            kem_output = @protocol.hybrid_fn.kem(@e, message)
+            @symmetric_state.mix_key(kem_output)
           end
         end
         payload_buffer << @symmetric_state.decrypt_and_hash(message)

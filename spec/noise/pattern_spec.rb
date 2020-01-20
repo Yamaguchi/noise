@@ -2,7 +2,54 @@
 
 require 'spec_helper'
 
-RSpec.describe Noise::Protocol do
+RSpec.describe Noise::Pattern do
+  describe '#hybrid?' do
+    subject { Noise::Pattern.create(name).hybrid? }
+
+    describe 'XXhfs' do
+      let(:name) { 'XXhfs' }
+      it { is_expected.to be_truthy }
+    end
+
+    describe 'XX' do
+      let(:name) { 'XX' }
+      it { is_expected.to be_falsy }
+    end
+  end
+
+  describe '.create' do
+    subject(:pattern) { Noise::Pattern.create(name) }
+
+    describe 'XX' do
+      let(:name) { 'XX' }
+      let(:tokens) do
+        [
+          [Noise::Token::E],
+          [Noise::Token::E, Noise::Token::EE, Noise::Token::S, Noise::Token::ES],
+          [Noise::Token::S, Noise::Token::SE]
+        ]
+      end
+
+      it { expect(pattern.hybrid?).to eq false }
+      it { expect(pattern.tokens).to eq tokens }
+    end
+
+    describe 'XXhfs' do
+      let(:name) { 'XXhfs' }
+      let(:tokens) do
+        [
+          [Noise::Token::E, Noise::Token::E1],
+          [Noise::Token::E, Noise::Token::EE, Noise::Token::EKEM1, Noise::Token::S, Noise::Token::ES],
+          [Noise::Token::S, Noise::Token::SE]
+        ]
+      end
+
+      it { expect(pattern.hybrid?).to eq true }
+      it { expect(pattern.modifiers.first).to be_kind_of Noise::Modifier::Hybrid }
+      it { expect(pattern.tokens).to eq tokens }
+    end
+  end
+
   describe '#required_keypairs' do
     subject { Noise::Pattern.create(name).required_keypairs(initiator) }
 
