@@ -17,6 +17,18 @@ def use_secp256k1
   end
 end
 
+def use_goldilocks
+  host_os = RbConfig::CONFIG['host_os']
+  case host_os
+    when /darwin|mac os/
+      ENV['LIBGOLDILOCKS'] = File.expand_path('lib/libgoldilocks.dylib', File.dirname(__FILE__))
+    when /linux/
+      ENV['LIBGOLDILOCKS'] = File.expand_path('lib/libgoldilocks.so', File.dirname(__FILE__))
+    else
+      raise "#{host_os} is an unsupported os."
+  end
+end
+
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
   config.example_status_persistence_file_path = '.rspec_status'
@@ -29,4 +41,5 @@ RSpec.configure do |config|
   end
 
   use_secp256k1
+  use_goldilocks
 end
