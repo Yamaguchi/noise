@@ -106,7 +106,7 @@ module Noise
         pattern.each do |token|
           case token
           when Noise::Token::E
-            @e ||= dh_fn.generate_keypair
+            @e ||= @protocol.dh_fn.generate_keypair
             message_buffer << @e.public_key
             mix_e(@e.public_key)
           when Noise::Token::S
