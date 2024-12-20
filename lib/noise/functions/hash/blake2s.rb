@@ -60,6 +60,7 @@ module Noise
         # @return context
         def init(out_len, key)
           raise ArgumentError if out_len.zero? || out_len > 32
+
           h = IV.dup
           h[0] ^= 0x01010000 ^ (key.size << 8) ^ out_len
           t = 0
@@ -168,6 +169,7 @@ module Noise
 
         class Context
           attr_accessor :b, :h, :t, :c, :out_len
+
           def initialize(b, h, t, c, out_len)
             @b = b
             @h = h

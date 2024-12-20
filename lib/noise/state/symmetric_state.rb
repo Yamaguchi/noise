@@ -8,8 +8,7 @@ module Noise
     # - h: A hash output of HASHLEN bytes.
     #
     class SymmetricState
-      attr_reader :h, :ck
-      attr_reader :cipher_state
+      attr_reader :h, :ck, :cipher_state
 
       def initialize(protocol, connection)
         @protocol = protocol

@@ -17,8 +17,7 @@ module Noise
     # message_patterns: A sequence of message patterns.
     #     Each message pattern is a sequence of tokens from the set ("e", "s", "ee", "es", "se", "ss").
     class HandshakeState
-      attr_reader :message_patterns, :symmetric_state
-      attr_reader :s, :rs, :e, :re
+      attr_reader :message_patterns, :symmetric_state, :s, :rs, :e, :re
 
       def initialize(connection, initiator, prologue, local_keypairs, remote_keys)
         @connection = connection
@@ -49,11 +48,11 @@ module Noise
       end
 
       def local_keypair_getter
-        ->(token) { instance_variable_get('@' + token.to_s).public_key }
+        ->(token) { instance_variable_get("@#{token}").public_key }
       end
 
       def remote_keypair_getter
-        ->(token) { instance_variable_get('@r' + token.to_s) }
+        ->(token) { instance_variable_get("@r#{token}") }
       end
 
       def process_initiator_pre_messages(keypair_getter)
@@ -154,7 +153,7 @@ module Noise
             0
           end
         key = message[0...len + offset]
-        message = message[(len + offset)..-1]
+        message = message[(len + offset)..]
         key = @symmetric_state.decrypt_and_hash(key) if is_encrypted
         [message, key]
       end

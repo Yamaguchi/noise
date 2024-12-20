@@ -50,6 +50,7 @@ module Noise
         'se'
       end
     end
+
     class TokenSS < TokenDH
       def get_key(keypair, _initiator)
         [keypair.s.private_key, keypair.rs]
@@ -59,6 +60,7 @@ module Noise
         'ss'
       end
     end
+
     class TokenPSK
       def to_s
         'psk'
@@ -77,6 +79,7 @@ module Noise
   module Modifier
     class Psk
       attr_reader :index
+
       def initialize(index)
         @index = index
       end
@@ -173,10 +176,6 @@ module Noise
   end
 
   class OneWayPattern < Pattern
-    def initialize(modifiers)
-      super(modifiers)
-    end
-
     def one_way?
       true
     end

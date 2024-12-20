@@ -22,7 +22,7 @@ module Noise
   autoload :State, 'noise/state'
 
   def self.logger
-    @logger ||= Logger.new(STDOUT)
+    @logger ||= Logger.new($stdout)
   end
 end
 

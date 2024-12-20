@@ -5,7 +5,8 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'noise/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'noise-ruby'
+  spec.name = 'noise-ruby'
+  spec.required_ruby_version = '~> 3.0'
   spec.version       = Noise::VERSION
   spec.authors       = ['Hajime Yamaguchi']
   spec.email         = ['gen.yamaguchi0@gmail.com']
@@ -26,6 +27,11 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', '>= 12.3.3'
   spec.add_development_dependency 'rspec', '~> 3.0'
   spec.add_development_dependency 'secp256k1-ruby'
+
+  spec.add_development_dependency 'rubocop'
+  spec.add_development_dependency 'rubocop-rspec'
+  spec.add_development_dependency 'simplecov'
+  spec.add_development_dependency 'simplecov-json'
 
   spec.add_runtime_dependency 'ecdsa'
   spec.add_runtime_dependency 'ed448'
