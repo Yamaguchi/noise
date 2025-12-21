@@ -2,30 +2,40 @@
 
 require 'bundler/setup'
 require 'noise'
+require 'json'
+require 'simplecov'
+require 'simplecov-json'
 
+SimpleCov.formatters =
+  SimpleCov::Formatter::MultiFormatter.new([SimpleCov::Formatter::HTMLFormatter, SimpleCov::Formatter::JSONFormatter])
+SimpleCov.start { enable_coverage :branch }
+
+SimpleCov.start do
+  add_filter '/spec/'
+end
 
 def use_secp256k1
   host_os = RbConfig::CONFIG['host_os']
   ENV['C_INCLUDE_PATH'] = File.expand_path('lib/include', File.dirname(__FILE__))
   case host_os
-    when /darwin|mac os/
-      ENV['LIBSECP256K1'] = File.expand_path('lib/libsecp256k1.dylib', File.dirname(__FILE__))
-    when /linux/
-      ENV['LIBSECP256K1'] = File.expand_path('lib/libsecp256k1.so', File.dirname(__FILE__))
-    else
-      raise "#{host_os} is an unsupported os."
+  when /darwin|mac os/
+    ENV['LIBSECP256K1'] = File.expand_path('lib/libsecp256k1.dylib', File.dirname(__FILE__))
+  when /linux/
+    ENV['LIBSECP256K1'] = File.expand_path('lib/libsecp256k1.so', File.dirname(__FILE__))
+  else
+    raise "#{host_os} is an unsupported os."
   end
 end
 
 def use_goldilocks
   host_os = RbConfig::CONFIG['host_os']
   case host_os
-    when /darwin|mac os/
-      ENV['LIBGOLDILOCKS'] = File.expand_path('lib/libgoldilocks.dylib', File.dirname(__FILE__))
-    when /linux/
-      ENV['LIBGOLDILOCKS'] = File.expand_path('lib/libgoldilocks.so', File.dirname(__FILE__))
-    else
-      raise "#{host_os} is an unsupported os."
+  when /darwin|mac os/
+    ENV['LIBGOLDILOCKS'] = File.expand_path('lib/libgoldilocks.dylib', File.dirname(__FILE__))
+  when /linux/
+    ENV['LIBGOLDILOCKS'] = File.expand_path('lib/libgoldilocks.so', File.dirname(__FILE__))
+  else
+    raise "#{host_os} is an unsupported os."
   end
 end
 

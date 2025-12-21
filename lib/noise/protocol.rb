@@ -27,6 +27,7 @@ module Noise
     def self.create(name)
       prefix, pattern_name, dh_name, cipher_name, hash_name = name.split('_')
       raise Noise::Exceptions::ProtocolNameError if prefix != 'Noise'
+
       new(name, pattern_name, cipher_name, hash_name, dh_name)
     end
 

@@ -17,18 +17,23 @@ RSpec.describe Noise::Connection do
         before do
           connection.psks = [('00' * 32).htb, ('00' * 32).htb]
         end
-        it { is_expected.to eq true }
+
+        it { is_expected.to be true }
       end
 
       context 'too long psk' do
         let(:name) { 'Noise_KNpsk0_25519_AESGCM_SHA256' }
+
         before { connection.psks = [('00' * 33).htb] }
+
         it { expect { subject }.to raise_error(Noise::Exceptions::NoisePSKError) }
       end
 
       context 'unmatch psk type' do
         let(:name) { 'Noise_KNpsk0+psk1_25519_AESGCM_SHA256' }
+
         before { connection.psks = [('00' * 32).htb] }
+
         it { expect { subject }.to raise_error(Noise::Exceptions::NoisePSKError) }
       end
     end
@@ -38,7 +43,7 @@ RSpec.describe Noise::Connection do
       let(:keypairs) { { s: ('00' * 32).htb, e: nil, rs: nil, re: nil } }
 
       context 'valid' do
-        it { is_expected.to eq true }
+        it { is_expected.to be true }
       end
 
       context 'unmatch key pair' do

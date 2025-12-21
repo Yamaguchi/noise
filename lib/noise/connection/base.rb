@@ -3,10 +3,9 @@
 module Noise
   module Connection
     class Base
-      attr_reader :protocol, :handshake_started, :handshake_finished, :handshake_hash, :handshake_state
-      attr_reader :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake
+      attr_reader :protocol, :handshake_started, :handshake_finished, :handshake_hash, :handshake_state,
+                  :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake, :s, :rs
       attr_accessor :psks, :prologue
-      attr_reader :s, :rs
 
       def initialize(name, keypairs: { s: nil, e: nil, rs: nil, re: nil })
         @protocol = Protocol.create(name)

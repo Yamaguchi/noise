@@ -30,9 +30,10 @@ module Noise
       def self.hkdf(chaining_key, input_key_material, num_outputs, digest)
         temp_key = hmac_hash(chaining_key, input_key_material, digest)
         output1 = hmac_hash(temp_key, "\x01", digest)
-        output2 = hmac_hash(temp_key, output1 + "\x02", digest)
+        output2 = hmac_hash(temp_key, "#{output1}\u0002", digest)
         return [output1, output2] if num_outputs == 2
-        output3 = hmac_hash(temp_key, output2 + "\x03", digest)
+
+        output3 = hmac_hash(temp_key, "#{output2}\u0003", digest)
         [output1, output2, output3]
       end
     end

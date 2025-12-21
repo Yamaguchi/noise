@@ -4,14 +4,17 @@ require 'spec_helper'
 
 RSpec.describe Noise::Functions::Hash do
   describe '.hmac_hash' do
-    subject { Noise::Functions::Hash.hmac_hash(key, data, digest).bth }
+    subject { described_class.hmac_hash(key, data, digest).bth }
+
     context 'SHA256' do
       let(:digest) { 'SHA256' }
       let(:key) { '2b0abd71cb6e7fcc623d554c22b31e90989bddf88690a6e1eeaeafc6004a1a6a'.htb }
       let(:data) { '6e6ceaad64c8cd4607e91ba6009c6384c708d0383e202a11c31dcd678a0f45f402'.htb }
       let(:expected) { '8174979c1cec6952824d45dcdbfe5841deef6d8253396a7e44d3f3ea685cc342' }
+
       it { is_expected.to eq expected }
     end
+
     context 'SHA512' do
       let(:digest) { 'SHA512' }
       let(:key) do
@@ -26,12 +29,14 @@ RSpec.describe Noise::Functions::Hash do
         '7d2573ddc0e7ac267f9df8d7e16eb55ce94bd58852b706e7e8335c81d7f2891d' \
         '7357dd642509534639cfd1d75be2863b758c7236837fdad22c5979b306fe5d1e'
       end
+
       it { is_expected.to eq expected }
     end
   end
 
   describe '.hkdf' do
-    subject { Noise::Functions::Hash.hkdf(chaining_key, input_key_material, num_outputs, digest).map(&:bth) }
+    subject { described_class.hkdf(chaining_key, input_key_material, num_outputs, digest).map(&:bth) }
+
     context 'SHA256 - num_outputs=2' do
       let(:chaining_key) { '4e6f6973655f4e4e5f32353531395f41455347434d5f53484132353600000000'.htb }
       let(:input_key_material) { '934eec08e1e6aad416990e8efcc5aca54520a3ceb2fb2d8bd54ed2bfe4129e2f'.htb }
@@ -43,8 +48,10 @@ RSpec.describe Noise::Functions::Hash do
           '59f4b8088bf038ddc43b506a331c95a96fd754f026c4fe7b1b21444dddbcb502'
         ]
       end
+
       it { is_expected.to eq expected }
     end
+
     context 'SHA256 - num_outputs=3' do
       let(:chaining_key) { '094a018a76b104b28b640089a8fa9a57db92c220f291fd062eac94799883da56'.htb }
       let(:input_key_material) { '54686973206973206d7920417573747269616e20706572737065637469766521'.htb }
@@ -57,8 +64,10 @@ RSpec.describe Noise::Functions::Hash do
           '851ef5e71be15d73a26d08d929762270b66fb98166f780ecaeb7893bfea2c616'
         ]
       end
+
       it { is_expected.to eq expected }
     end
+
     context 'SHA512 - num_outputs=2' do
       let(:chaining_key) do
         '4e6f6973655f4e4e5f32353531395f436861436861506f6c795f534841353132' \
@@ -75,8 +84,10 @@ RSpec.describe Noise::Functions::Hash do
           'cf98187652f5d6561714f58ba90da1489aa156346e9b8af5929714c83b74eacd'
         ]
       end
+
       it { is_expected.to eq expected }
     end
+
     context 'SHA512 - num_outputs=3' do
       let(:chaining_key) do
         '316bb75d6865b7c22fa67a9f4d74599e892fa37292145b1b7e3d99425fb80cfd' \
@@ -95,6 +106,7 @@ RSpec.describe Noise::Functions::Hash do
           '0bbffd0f04359def3157185b86c4fc4f3cf38b40597cbbd1029d999f67a78de8'
         ]
       end
+
       it { is_expected.to eq expected }
     end
   end

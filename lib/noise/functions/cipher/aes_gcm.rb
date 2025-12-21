@@ -7,7 +7,7 @@ module Noise
         MAX_NONCE = 2**64 - 1
 
         def encrypt(k, n, ad, plaintext)
-          cipher = OpenSSL::Cipher::AES.new(256, :GCM).encrypt
+          cipher = OpenSSL::Cipher.new('aes-256-gcm').encrypt
           cipher.key = k
           cipher.iv = nonce_to_bytes(n)
           cipher.auth_data = ad
@@ -17,11 +17,11 @@ module Noise
         end
 
         def decrypt(k, n, ad, ciphertext)
-          cipher = OpenSSL::Cipher::AES.new(256, :GCM).decrypt
+          cipher = OpenSSL::Cipher.new('aes-256-gcm').decrypt
           cipher.key = k
           cipher.iv = nonce_to_bytes(n)
           cipher.auth_data = ad
-          cipher.auth_tag = ciphertext[-16..-1]
+          cipher.auth_tag = ciphertext[-16..]
           cipher.update(ciphertext[0...-16]) + cipher.final
         rescue OpenSSL::Cipher::CipherError => e
           raise Noise::Exceptions::DecryptError, "Decrpyt failed. #{e.message}", e.backtrace
