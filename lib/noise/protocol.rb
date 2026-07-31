@@ -25,8 +25,11 @@ module Noise
     }.stringify_keys.freeze
 
     def self.create(name)
-      prefix, pattern_name, dh_name, cipher_name, hash_name = name.split('_')
-      raise Noise::Exceptions::ProtocolNameError if prefix != 'Noise'
+      parts = name.split('_')
+      raise Noise::Exceptions::ProtocolNameError, "Malformed protocol name: #{name}" unless parts.size == 5
+
+      prefix, pattern_name, dh_name, cipher_name, hash_name = parts
+      raise Noise::Exceptions::ProtocolNameError, "Malformed protocol name: #{name}" if prefix != 'Noise'
 
       new(name, pattern_name, cipher_name, hash_name, dh_name)
     end
@@ -44,7 +47,8 @@ module Noise
       @cipher_fn = CIPHER[cipher_name]&.new
       @hash_fn = HASH[hash_name]&.new
       @dh_fn = DH[dh_name]&.new
-      raise Noise::Exceptions::ProtocolNameError unless @cipher_fn && @hash_fn && @dh_fn
+      raise Noise::Exceptions::ProtocolNameError, "Unsupported function in: #{@name}" unless
+        @cipher_fn && @hash_fn && @dh_fn
     end
 
     def psk?
