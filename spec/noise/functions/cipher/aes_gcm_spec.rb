@@ -47,4 +47,17 @@ RSpec.describe Noise::Functions::Cipher::AesGcm do
       expect(subject.bth).to eq 'fa6389ae59ea478a40fd68b33ec2273573090b6492d8d90f604d283ed6d2e338'
     }
   end
+
+  # A Noise message frequently carries a zero-length payload.
+  describe 'empty plaintext' do
+    subject { cipher.encrypt(k, n, ad, '') }
+
+    let(:cipher) { described_class.new }
+    let(:ad) { '955030590f203ad8e879746b277d16f8009661b332620edf641f7fe4c05a4f76'.htb }
+    let(:k) { '3f9e4cb3ec38f75adf64eed6acbea18d5aceaa3742b55f30282eb6c8ec945c53'.htb }
+    let(:n) { 1 }
+
+    it { expect(subject.bytesize).to eq 16 }
+    it { expect(cipher.decrypt(k, n, ad, subject)).to eq '' }
+  end
 end

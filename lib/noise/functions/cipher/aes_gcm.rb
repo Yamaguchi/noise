@@ -11,7 +11,7 @@ module Noise
           cipher.key = k
           cipher.iv = nonce_to_bytes(n)
           cipher.auth_data = ad
-          cipher.update(plaintext) + cipher.final + cipher.auth_tag
+          update(cipher, plaintext) + cipher.final + cipher.auth_tag
         rescue OpenSSL::Cipher::CipherError => e
           raise Noise::Exceptions::EncryptError, "Encrypt failed. #{e.message}", e.backtrace
         end
@@ -22,7 +22,7 @@ module Noise
           cipher.iv = nonce_to_bytes(n)
           cipher.auth_data = ad
           cipher.auth_tag = ciphertext[-16..]
-          cipher.update(ciphertext[0...-16]) + cipher.final
+          update(cipher, ciphertext[0...-16]) + cipher.final
         rescue OpenSSL::Cipher::CipherError => e
           raise Noise::Exceptions::DecryptError, "Decrpyt failed. #{e.message}", e.backtrace
         end
@@ -40,6 +40,16 @@ module Noise
         # 32 bytes filled with zeros.
         def rekey(k)
           encrypt(k, MAX_NONCE, '', "\x00" * 32)[0...32]
+        end
+
+        private
+
+        # A zero-length payload is normal in a Noise message, but the openssl gem shipped with
+        # Ruby 3.0 raises ArgumentError('data must not be empty') instead of returning ''.
+        def update(cipher, data)
+          return String.new if data.empty?
+
+          cipher.update(data)
         end
       end
     end
