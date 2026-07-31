@@ -10,6 +10,7 @@ module Noise
     #
     class CipherState
       MAX_NONCE = 2**64 - 1
+      TAG_LENGTH = 16
 
       attr_reader :k, :n
 
@@ -46,6 +47,9 @@ module Noise
       def decrypt_with_ad(ad, ciphertext)
         return ciphertext unless key?
         raise Noise::Exceptions::MaxNonceError if @n == MAX_NONCE
+        # Without this the ciphers slice a nil authentication tag out of the truncated input.
+        raise Noise::Exceptions::DecryptError, 'Ciphertext is shorter than the tag.' if
+          ciphertext.bytesize < TAG_LENGTH
 
         plaintext = @cipher.decrypt(@k, @n, ad, ciphertext)
         @n += 1

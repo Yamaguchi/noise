@@ -70,4 +70,49 @@ RSpec.describe Noise::Connection do
       end
     end
   end
+
+  describe 'message length validation' do
+    let(:name) { 'Noise_NN_25519_AESGCM_SHA256' }
+    let(:initiator) { Noise::Connection::Initiator.new(name) }
+    let(:responder) { Noise::Connection::Responder.new(name) }
+    let(:message) { initiator.write_message('') }
+
+    before do
+      initiator.start_handshake
+      responder.start_handshake
+    end
+
+    context 'when the handshake message is truncated' do
+      it 'raises NoiseHandshakeError instead of failing on a nil slice' do
+        expect { responder.read_message(message[0...10]) }
+          .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'Message is too short.')
+      end
+    end
+
+    context 'when the handshake message is longer than the maximum length' do
+      it {
+        expect { responder.read_message('a' * (described_class::Base::MAX_MESSAGE_LENGTH + 1)) }
+          .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.')
+      }
+    end
+
+    context 'when the payload would make the message longer than the maximum length' do
+      it {
+        expect { initiator.write_message('a' * described_class::Base::MAX_MESSAGE_LENGTH) }
+          .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.')
+      }
+    end
+
+    context 'when the transport message is shorter than the authentication tag' do
+      before do
+        responder.read_message(message)
+        initiator.read_message(responder.write_message(''))
+      end
+
+      it {
+        expect { responder.decrypt('short') }
+          .to raise_error(Noise::Exceptions::DecryptError, 'Ciphertext is shorter than the tag.')
+      }
+    end
+  end
 end

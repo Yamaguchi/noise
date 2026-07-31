@@ -152,6 +152,8 @@ module Noise
           else
             0
           end
+        raise Noise::Exceptions::NoiseHandshakeError, 'Message is too short.' if message.bytesize < len + offset
+
         key = message[0...len + offset]
         message = message[(len + offset)..]
         key = @symmetric_state.decrypt_and_hash(key) if is_encrypted

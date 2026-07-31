@@ -3,6 +3,9 @@
 module Noise
   module Connection
     class Base
+      # The Noise spec caps a handshake or transport message at 65535 bytes.
+      MAX_MESSAGE_LENGTH = 65_535
+
       attr_reader :protocol, :handshake_started, :handshake_finished, :handshake_hash, :handshake_state,
                   :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake, :s, :rs
       attr_accessor :psks, :prologue
@@ -54,6 +57,10 @@ module Noise
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :write
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
 
+        if @handshake_state.expected_message_length(payload.bytesize) > MAX_MESSAGE_LENGTH
+          raise Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.'
+        end
+
         @next_message = :read
         buffer = +''
         result = @handshake_state.write_message(payload, buffer)
@@ -66,6 +73,8 @@ module Noise
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :read
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
+        raise Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.' if
+          data.bytesize > MAX_MESSAGE_LENGTH
 
         @next_message = :write
         buffer = +''
