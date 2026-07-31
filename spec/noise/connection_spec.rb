@@ -23,12 +23,23 @@ RSpec.describe Noise::Connection do
         it { is_expected.to be true }
       end
 
+      # The connection is usable without psks for any other pattern, so nothing sets @psks unless
+      # the caller does.
+      context 'psks never set' do
+        let(:name) { 'Noise_KNpsk0_25519_AESGCM_SHA256' }
+
+        it { expect { subject }.to raise_error(Noise::Exceptions::NoisePSKError, 'psks are not set.') }
+      end
+
       context 'too long psk' do
         let(:name) { 'Noise_KNpsk0_25519_AESGCM_SHA256' }
 
         before { connection.psks = [('00' * 33).htb] }
 
-        it { expect { subject }.to raise_error(Noise::Exceptions::NoisePSKError) }
+        it {
+          expect { subject }
+            .to raise_error(Noise::Exceptions::NoisePSKError, 'psks have to be 32 bytes long.')
+        }
       end
 
       context 'unmatch psk type' do
@@ -36,7 +47,10 @@ RSpec.describe Noise::Connection do
 
         before { connection.psks = [('00' * 32).htb] }
 
-        it { expect { subject }.to raise_error(Noise::Exceptions::NoisePSKError) }
+        it {
+          expect { subject }
+            .to raise_error(Noise::Exceptions::NoisePSKError, 'This protocol needs 2 psks, got 1.')
+        }
       end
     end
 

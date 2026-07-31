@@ -139,9 +139,15 @@ module Noise
       end
 
       def validate_psk!
+        raise Noise::Exceptions::NoisePSKError, 'psks are not set.' if @psks.nil?
         # Invalid psk length! Has to be 32 bytes long
-        raise Noise::Exceptions::NoisePSKError if @psks.any? { |psk| psk.bytesize != 32 }
-        raise Noise::Exceptions::NoisePSKError if @protocol.pattern.psk_count != @psks.count
+        raise Noise::Exceptions::NoisePSKError, 'psks have to be 32 bytes long.' if
+          @psks.any? { |psk| psk.bytesize != 32 }
+
+        return if @protocol.pattern.psk_count == @psks.count
+
+        raise Noise::Exceptions::NoisePSKError,
+              "This protocol needs #{@protocol.pattern.psk_count} psks, got #{@psks.count}."
       end
 
       def missing_keypairs?
