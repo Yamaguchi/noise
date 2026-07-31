@@ -6,8 +6,8 @@ module Noise
   module Functions
     module Hash
       class Blake3
-        HASHLEN = 64
-        BLOCKLEN = 128
+        HASHLEN = 32
+        BLOCKLEN = 64
         def hash(data)
           ::Blake3.digest(data)
         end
