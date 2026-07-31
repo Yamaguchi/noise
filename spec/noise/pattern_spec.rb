@@ -245,6 +245,42 @@ RSpec.describe Noise::Protocol do
     end
   end
 
+  describe '#apply_pattern_modifiers' do
+    subject { Noise::Pattern.create(name).apply_pattern_modifiers }
+
+    # NN has two messages, so psk0 through psk2 are in range.
+    context 'psk0' do
+      let(:name) { 'NNpsk0' }
+
+      it { expect { subject }.not_to raise_error }
+    end
+
+    context 'psk2' do
+      let(:name) { 'NNpsk2' }
+
+      it { expect { subject }.not_to raise_error }
+    end
+
+    context 'psk3' do
+      let(:name) { 'NNpsk3' }
+
+      it { expect { subject }.to raise_error(Noise::Exceptions::PSKValueError) }
+    end
+
+    # XK has three messages, so psk3 is the last valid index.
+    context 'psk3 on a three message pattern' do
+      let(:name) { 'XKpsk3' }
+
+      it { expect { subject }.not_to raise_error }
+    end
+
+    context 'psk4 on a three message pattern' do
+      let(:name) { 'XKpsk4' }
+
+      it { expect { subject }.to raise_error(Noise::Exceptions::PSKValueError) }
+    end
+  end
+
   # A deferred pattern only postpones DH operations, so it needs exactly the same keypairs as the
   # fundamental pattern it derives from.
   describe '#required_keypairs of deferred patterns' do

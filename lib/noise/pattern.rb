@@ -129,7 +129,8 @@ module Noise
         case modifier
         when Modifier::Psk
           index = modifier.index
-          raise Noise::Exceptions::PSKValueError if index / 2 > @tokens.size
+          # psk0 prepends to the first message, pskN appends to the Nth one.
+          raise Noise::Exceptions::PSKValueError if index > @tokens.size
 
           if index.zero?
             @tokens[0].insert(0, Token::PSK)
