@@ -8,7 +8,6 @@ require 'rbnacl'
 require 'ruby_hmac'
 require 'securerandom'
 
-require 'noise/utils/hash'
 require 'noise/utils/string'
 
 module Noise

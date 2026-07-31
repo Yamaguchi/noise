@@ -2,6 +2,8 @@
 
 require 'spec_helper'
 
+using Noise::Utils::HexString
+
 RSpec.describe Noise::Connection do
   describe '#validate' do
     subject { connection.validate }

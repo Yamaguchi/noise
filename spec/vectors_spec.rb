@@ -2,6 +2,8 @@
 
 require 'spec_helper'
 
+using Noise::Utils::HexString
+
 require 'json'
 
 RSpec.describe 'Vectors' do
@@ -57,8 +59,11 @@ RSpec.describe 'Vectors' do
           keypairs_resp = get_keypairs(v, false)
           responder = Noise::Connection::Responder.new(protocol_name, keypairs: keypairs_resp)
           if v.key?(:init_psks) && v.key?(:resp_psks)
-            initiator.psks = v[:init_psks].map(&:htb)
-            responder.psks = v[:resp_psks].map(&:htb)
+            # Symbol#to_proc does not see refinements, so htb needs an explicit block.
+            # rubocop:disable Style/SymbolProc
+            initiator.psks = v[:init_psks].map { |psk| psk.htb }
+            responder.psks = v[:resp_psks].map { |psk| psk.htb }
+            # rubocop:enable Style/SymbolProc
           end
 
           initiator.prologue = v[:init_prologue].htb

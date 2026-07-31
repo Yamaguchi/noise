@@ -2,6 +2,8 @@
 
 require 'spec_helper'
 
+using Noise::Utils::HexString
+
 RSpec.describe Noise::Functions::Cipher::AesGcm do
   describe '#encrypt' do
     subject { cipher.encrypt(k, n, ad, plaintext).bth }

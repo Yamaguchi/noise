@@ -2,6 +2,8 @@
 
 require 'spec_helper'
 
+using Noise::Utils::HexString
+
 RSpec.describe Noise::Functions::DH::Secp256k1 do
   # https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#initiator-tests
   describe '#dh' do

@@ -6,23 +6,23 @@ module Noise
     attr_reader :name, :pattern
 
     CIPHER = {
-      'AESGCM': Noise::Functions::Cipher::AesGcm,
-      'ChaChaPoly': Noise::Functions::Cipher::ChaChaPoly
-    }.stringify_keys.freeze
+      'AESGCM' => Noise::Functions::Cipher::AesGcm,
+      'ChaChaPoly' => Noise::Functions::Cipher::ChaChaPoly
+    }.freeze
 
     DH = {
-      '25519': Noise::Functions::DH::ED25519,
-      '448': Noise::Functions::DH::ED448,
-      'secp256k1': Noise::Functions::DH::Secp256k1
-    }.stringify_keys.freeze
+      '25519' => Noise::Functions::DH::ED25519,
+      '448' => Noise::Functions::DH::ED448,
+      'secp256k1' => Noise::Functions::DH::Secp256k1
+    }.freeze
 
     HASH = {
-      'BLAKE2b': Noise::Functions::Hash::Blake2b,
-      'BLAKE2s': Noise::Functions::Hash::Blake2s,
-      'SHA256': Noise::Functions::Hash::Sha256,
-      'SHA512': Noise::Functions::Hash::Sha512,
-      'BLAKE3': Noise::Functions::Hash::Blake3
-    }.stringify_keys.freeze
+      'BLAKE2b' => Noise::Functions::Hash::Blake2b,
+      'BLAKE2s' => Noise::Functions::Hash::Blake2s,
+      'SHA256' => Noise::Functions::Hash::Sha256,
+      'SHA512' => Noise::Functions::Hash::Sha512,
+      'BLAKE3' => Noise::Functions::Hash::Blake3
+    }.freeze
 
     def self.create(name)
       parts = name.split('_')

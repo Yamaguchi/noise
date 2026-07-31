@@ -2,6 +2,8 @@
 
 require 'spec_helper'
 
+using Noise::Utils::HexString
+
 RSpec.describe Noise::Exceptions::InvalidPublicKeyError do
   subject { described_class.new(public_key) }
 
