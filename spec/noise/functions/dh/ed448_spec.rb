@@ -26,6 +26,41 @@ RSpec.describe Noise::Functions::DH::ED448 do
     it { is_expected.to eq shared_key }
   end
 
+  describe '#dh with an invalid public key' do
+    let(:private_key) do
+      '9a8f4925d1519f5775cf46b04b5800d4ee9ee8bae8bc5565d498c28d' \
+      'd9c9baf574a9419744897391006382a6f127ab1d9ac2d8c0a598726b'.htb
+    end
+    let(:ed448) { described_class.new }
+
+    context 'with an all-zero public key' do
+      let(:public_key) { ('00' * 56).htb }
+
+      it {
+        expect { ed448.dh(private_key, public_key) }
+          .to raise_error Noise::Exceptions::InvalidPublicKeyError
+      }
+    end
+
+    context 'with a public key shorter than dhlen' do
+      let(:public_key) { ('01' * 55).htb }
+
+      it {
+        expect { ed448.dh(private_key, public_key) }
+          .to raise_error Noise::Exceptions::InvalidPublicKeyError
+      }
+    end
+
+    context 'with a public key longer than dhlen' do
+      let(:public_key) { ('01' * 57).htb }
+
+      it {
+        expect { ed448.dh(private_key, public_key) }
+          .to raise_error Noise::Exceptions::InvalidPublicKeyError
+      }
+    end
+  end
+
   describe '#generate_keypair' do
     let(:dh) { described_class.new }
     let(:alice) { dh.generate_keypair }
