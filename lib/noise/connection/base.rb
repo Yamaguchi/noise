@@ -3,8 +3,11 @@
 module Noise
   module Connection
     class Base
-      # The Noise spec caps a handshake or transport message at 65535 bytes.
+      # The Noise spec caps a handshake or transport message at 65535 bytes. A transport message is
+      # the ciphertext, so the plaintext a caller may hand to encrypt is shorter by the
+      # authentication tag that ENCRYPT() appends.
       MAX_MESSAGE_LENGTH = 65_535
+      MAX_PLAINTEXT_LENGTH = MAX_MESSAGE_LENGTH - Noise::State::CipherState::TAG_LENGTH
 
       attr_reader :protocol, :handshake_started, :handshake_finished, :handshake_hash, :handshake_state,
                   :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake, :s, :rs
@@ -86,11 +89,25 @@ module Noise
       end
 
       def encrypt(data)
-        transport_cipher_state(:encrypt).encrypt_with_ad('', data)
+        cipher_state = transport_cipher_state(:encrypt)
+        if data.bytesize > MAX_PLAINTEXT_LENGTH
+          raise Noise::Exceptions::MessageTooLongError,
+                "Plaintext is #{data.bytesize} bytes, which exceeds the maximum of #{MAX_PLAINTEXT_LENGTH}."
+        end
+
+        cipher_state.encrypt_with_ad('', data)
       end
 
       def decrypt(data)
-        transport_cipher_state(:decrypt).decrypt_with_ad('', data)
+        cipher_state = transport_cipher_state(:decrypt)
+        # Rejected before the cipher state is used, so an over-long message leaves n untouched
+        # and the connection usable, exactly as a failed decryption does.
+        if data.bytesize > MAX_MESSAGE_LENGTH
+          raise Noise::Exceptions::MessageTooLongError,
+                "Message is #{data.bytesize} bytes, which exceeds the maximum of #{MAX_MESSAGE_LENGTH}."
+        end
+
+        cipher_state.decrypt_with_ad('', data)
       end
 
       # @return [Integer] the nonce the next #encrypt call uses.

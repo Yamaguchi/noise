@@ -7,6 +7,7 @@ module Noise
     autoload :InvalidNonceError, 'noise/exceptions/invalid_nonce_error'
     autoload :InvalidPublicKeyError, 'noise/exceptions/invalid_public_key_error'
     autoload :MaxNonceError, 'noise/exceptions/max_nonce_error'
+    autoload :MessageTooLongError, 'noise/exceptions/message_too_long_error'
     autoload :MissingDependencyError, 'noise/exceptions/missing_dependency_error'
     autoload :ProtocolNameError, 'noise/exceptions/protocol_name_error'
     autoload :NoiseHandshakeError, 'noise/exceptions/noise_handshake_error'

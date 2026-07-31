@@ -142,6 +142,39 @@ RSpec.describe Noise::Connection do
           .to raise_error(Noise::Exceptions::DecryptError, 'Ciphertext is shorter than the tag.')
       }
     end
+
+    context 'when the handshake has finished' do
+      let(:max_plaintext) { described_class::Base::MAX_PLAINTEXT_LENGTH }
+
+      before do
+        responder.read_message(message)
+        initiator.read_message(responder.write_message(''))
+      end
+
+      it 'encrypts the longest plaintext that still fits in a maximum length message' do
+        ciphertext = initiator.encrypt('a' * max_plaintext)
+
+        expect(ciphertext.bytesize).to eq described_class::Base::MAX_MESSAGE_LENGTH
+        expect(responder.decrypt(ciphertext)).to eq 'a' * max_plaintext
+      end
+
+      it 'rejects a plaintext whose ciphertext would exceed the maximum length' do
+        expect { initiator.encrypt('a' * (max_plaintext + 1)) }
+          .to raise_error(Noise::Exceptions::MessageTooLongError, /65520 bytes.*maximum of 65519/)
+
+        # The rejection happens before the cipher state is touched, so the connection stays usable.
+        expect(initiator.cipher_state_encrypt.n).to eq 0
+        expect(responder.decrypt(initiator.encrypt('hello'))).to eq 'hello'
+      end
+
+      it 'rejects a transport message longer than the maximum length' do
+        expect { responder.decrypt('a' * (described_class::Base::MAX_MESSAGE_LENGTH + 1)) }
+          .to raise_error(Noise::Exceptions::MessageTooLongError, /65536 bytes.*maximum of 65535/)
+
+        expect(responder.cipher_state_decrypt.n).to eq 0
+        expect(responder.decrypt(initiator.encrypt('hello'))).to eq 'hello'
+      end
+    end
   end
 
   describe 'transport nonce' do
