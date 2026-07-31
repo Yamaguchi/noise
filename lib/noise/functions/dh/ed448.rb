@@ -19,8 +19,19 @@ module Noise
           Noise::Key.new(private_key, public_key)
         end
 
+        # Computes the X448 shared secret for the given remote public key.
+        #
+        # Ed448::X448.dh raises a plain RuntimeError when libgoldilocks rejects the base
+        # point because it lies in a small subgroup, and it silently zero-pads a public key
+        # shorter than DHLEN. The length is checked up front and the RuntimeError is
+        # translated, so an unusable remote key always surfaces as InvalidPublicKeyError,
+        # the same class the other DH functions raise.
         def dh(private_key, public_key)
+          raise Noise::Exceptions::InvalidPublicKeyError, public_key unless public_key.bytesize == DHLEN
+
           Ed448::X448.dh(public_key, private_key)
+        rescue RuntimeError
+          raise Noise::Exceptions::InvalidPublicKeyError, public_key
         end
 
         def dhlen
