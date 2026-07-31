@@ -31,8 +31,9 @@ module Noise
 
         initiator_keypair_getter, responder_keypair_getter = get_keypair_getter(initiator)
 
-        # Sets message_patterns to the message patterns from handshake_pattern
-        @message_patterns = @protocol.pattern.tokens.dup
+        # Sets message_patterns to the message patterns from handshake_pattern. The inner arrays are
+        # copied too, so consuming them here can never reach back into the shared Pattern.
+        @message_patterns = @protocol.pattern.tokens.map(&:dup)
 
         process_initiator_pre_messages(initiator_keypair_getter)
         process_fallback(initiator_keypair_getter)

@@ -71,6 +71,18 @@ RSpec.describe Noise::Connection do
     end
   end
 
+  describe '#start_handshake' do
+    let(:connection) { Noise::Connection::Initiator.new('Noise_NN_25519_AESGCM_SHA256') }
+
+    before { connection.start_handshake }
+
+    it 'copies the message patterns instead of sharing them with the protocol pattern' do
+      tokens = connection.protocol.pattern.tokens
+      expect(connection.handshake_state.message_patterns).to eq tokens
+      expect(connection.handshake_state.message_patterns.first).not_to equal tokens.first
+    end
+  end
+
   describe 'message length validation' do
     let(:name) { 'Noise_NN_25519_AESGCM_SHA256' }
     let(:initiator) { Noise::Connection::Initiator.new(name) }
