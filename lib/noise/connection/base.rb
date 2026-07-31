@@ -29,11 +29,15 @@ module Noise
         @handshake_started = true
       end
 
+      # Restarts the handshake with a fallback pattern, carrying over the keys of the aborted one.
+      #
+      # The roles swap here: the party that wrote the aborted message now reads, and the one that
+      # failed to read it now writes. Both sides are already in that state, so @next_message is
+      # deliberately left as it is rather than reset through initialize_next_message.
       def fallback(fallback_name)
         @protocol = Protocol.create(fallback_name)
         @handshake_started = false
         @handshake_finished = false
-        # initialize_next_message
         @local_keypairs = { e: @handshake_state.e, s: @handshake_state.s }
         @remote_keys = { re: @handshake_state.re, rs: @handshake_state.rs }
         start_handshake
