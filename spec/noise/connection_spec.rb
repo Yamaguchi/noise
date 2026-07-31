@@ -48,4 +48,33 @@ RSpec.describe Noise::Connection do
       end
     end
   end
+
+  describe 'one-way pattern' do
+    let(:name) { 'Noise_N_25519_AESGCM_SHA256' }
+    let(:responder_key) { Noise::Functions::DH::ED25519.new.generate_keypair }
+    let(:initiator) { Noise::Connection::Initiator.new(name, keypairs: { rs: responder_key.public_key }) }
+    let(:responder) { Noise::Connection::Responder.new(name, keypairs: { s: responder_key.private_key }) }
+
+    before do
+      initiator.start_handshake
+      responder.start_handshake
+      responder.read_message(initiator.write_message)
+    end
+
+    it 'lets the initiator send transport messages' do
+      expect(responder.decrypt(initiator.encrypt('hello'))).to eq 'hello'
+    end
+
+    it 'rejects a send by the responder' do
+      expect { responder.encrypt('hello') }.to raise_error(
+        Noise::Exceptions::NoiseHandshakeError, Noise::Connection::Base::ONE_WAY_SEND_ERROR
+      )
+    end
+
+    it 'rejects a receive by the initiator' do
+      expect { initiator.decrypt('hello') }.to raise_error(
+        Noise::Exceptions::NoiseHandshakeError, Noise::Connection::Base::ONE_WAY_RECEIVE_ERROR
+      )
+    end
+  end
 end

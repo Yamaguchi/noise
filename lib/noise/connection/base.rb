@@ -3,6 +3,11 @@
 module Noise
   module Connection
     class Base
+      # Raised when the responder of a one-way pattern tries to send a transport message.
+      ONE_WAY_SEND_ERROR = 'Responder cannot send transport messages in a one-way pattern.'
+      # Raised when the initiator of a one-way pattern tries to receive a transport message.
+      ONE_WAY_RECEIVE_ERROR = 'Initiator cannot receive transport messages in a one-way pattern.'
+
       attr_reader :protocol, :handshake_started, :handshake_finished, :handshake_hash, :handshake_state
       attr_reader :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake
       attr_accessor :psks, :prologue
@@ -75,14 +80,22 @@ module Noise
         buffer
       end
 
+      # Encrypts a transport message with the sending cipher state.
+      # In a one-way pattern only the initiator sends, so the responder has no sending cipher state
+      # and calling this raises NoiseHandshakeError instead of failing on a nil cipher state.
       def encrypt(data)
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
+        raise Noise::Exceptions::NoiseHandshakeError, ONE_WAY_SEND_ERROR unless @cipher_state_encrypt
 
         @cipher_state_encrypt.encrypt_with_ad('', data)
       end
 
+      # Decrypts a transport message with the receiving cipher state.
+      # In a one-way pattern the responder never sends, so the initiator has no receiving cipher
+      # state and calling this raises NoiseHandshakeError instead of failing on a nil cipher state.
       def decrypt(data)
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
+        raise Noise::Exceptions::NoiseHandshakeError, ONE_WAY_RECEIVE_ERROR unless @cipher_state_decrypt
 
         @cipher_state_decrypt.decrypt_with_ad('', data)
       end
