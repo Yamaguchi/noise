@@ -103,7 +103,7 @@ module Noise
         raise Noise::Exceptions::NoisePSKError if @protocol.pattern.psk_count != @psks.count
       end
 
-      def valid_keypairs?
+      def missing_keypairs?
         keypairs = @local_keypairs.merge(@remote_keys)
         @protocol.pattern.required_keypairs(initiator?).any? { |keypair| !keypairs[keypair] }
       end
@@ -111,7 +111,7 @@ module Noise
       def validate
         validate_psk! if @protocol.psk?
 
-        raise Noise::Exceptions::NoiseValidationError if valid_keypairs?
+        raise Noise::Exceptions::NoiseValidationError if missing_keypairs?
 
         true
       end
