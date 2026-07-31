@@ -67,8 +67,7 @@ module Noise
 
         @next_message = :read
         buffer = +''
-        result = @handshake_state.write_message(payload, buffer)
-        @handshake_finished = true if result
+        @handshake_finished = @handshake_state.write_message(payload, buffer)
         buffer
       end
 
@@ -82,8 +81,7 @@ module Noise
 
         @next_message = :write
         buffer = +''
-        result = @handshake_state.read_message(data, buffer)
-        @handshake_finished = true if result
+        @handshake_finished = @handshake_state.read_message(data, buffer)
         buffer
       end
 

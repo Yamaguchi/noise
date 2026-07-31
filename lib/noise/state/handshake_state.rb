@@ -100,6 +100,7 @@ module Noise
       end
 
       # Takes a payload byte sequence which may be zero-length, and a message_buffer to write the output into
+      # @return [Boolean] true if this was the last handshake message, false otherwise.
       def write_message(payload, message_buffer)
         pattern = @message_patterns.shift
 
@@ -118,11 +119,12 @@ module Noise
           end
         end
         message_buffer << @symmetric_state.encrypt_and_hash(payload)
-        @symmetric_state.split if @message_patterns.empty?
+        finish_handshake
       end
 
       # Takes a byte sequence containing a Noise handshake message,
       # and a payload_buffer to write the message's plaintext payload into
+      # @return [Boolean] true if this was the last handshake message, false otherwise.
       def read_message(message, payload_buffer)
         pattern = @message_patterns.shift
         pattern.each do |token|
@@ -139,10 +141,18 @@ module Noise
           end
         end
         payload_buffer << @symmetric_state.decrypt_and_hash(message)
-        @symmetric_state.split if @message_patterns.empty?
+        finish_handshake
       end
 
       private
+
+      # Splits into the transport cipher states once every message pattern has been processed.
+      def finish_handshake
+        return false unless @message_patterns.empty?
+
+        @symmetric_state.split
+        true
+      end
 
       def extract_key(message, is_encrypted)
         len = @protocol.dh_fn.dhlen
