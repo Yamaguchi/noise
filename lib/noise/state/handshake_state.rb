@@ -127,8 +127,7 @@ module Noise
         pattern.each do |token|
           case token
           when Noise::Token::E
-            message, re = extract_key(message, false)
-            @re ||= re
+            message, @re = extract_key(message, false)
             mix_e(@re)
           when Noise::Token::S
             message, @rs = extract_key(message, true)
