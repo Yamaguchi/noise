@@ -31,8 +31,9 @@ module Noise
 
         initiator_keypair_getter, responder_keypair_getter = get_keypair_getter(initiator)
 
-        # Sets message_patterns to the message patterns from handshake_pattern
-        @message_patterns = @protocol.pattern.tokens.dup
+        # Sets message_patterns to the message patterns from handshake_pattern. The inner arrays are
+        # copied too, so consuming them here can never reach back into the shared Pattern.
+        @message_patterns = @protocol.pattern.tokens.map(&:dup)
 
         process_initiator_pre_messages(initiator_keypair_getter)
         process_fallback(initiator_keypair_getter)
@@ -99,6 +100,7 @@ module Noise
       end
 
       # Takes a payload byte sequence which may be zero-length, and a message_buffer to write the output into
+      # @return [Boolean] true if this was the last handshake message, false otherwise.
       def write_message(payload, message_buffer)
         pattern = @message_patterns.shift
 
@@ -117,18 +119,18 @@ module Noise
           end
         end
         message_buffer << @symmetric_state.encrypt_and_hash(payload)
-        @symmetric_state.split if @message_patterns.empty?
+        finish_handshake
       end
 
       # Takes a byte sequence containing a Noise handshake message,
       # and a payload_buffer to write the message's plaintext payload into
+      # @return [Boolean] true if this was the last handshake message, false otherwise.
       def read_message(message, payload_buffer)
         pattern = @message_patterns.shift
         pattern.each do |token|
           case token
           when Noise::Token::E
-            message, re = extract_key(message, false)
-            @re ||= re
+            message, @re = extract_key(message, false)
             mix_e(@re)
           when Noise::Token::S
             message, @rs = extract_key(message, true)
@@ -139,10 +141,18 @@ module Noise
           end
         end
         payload_buffer << @symmetric_state.decrypt_and_hash(message)
-        @symmetric_state.split if @message_patterns.empty?
+        finish_handshake
       end
 
       private
+
+      # Splits into the transport cipher states once every message pattern has been processed.
+      def finish_handshake
+        return false unless @message_patterns.empty?
+
+        @symmetric_state.split
+        true
+      end
 
       def extract_key(message, is_encrypted)
         len = @protocol.dh_fn.dhlen
@@ -152,6 +162,8 @@ module Noise
           else
             0
           end
+        raise Noise::Exceptions::NoiseHandshakeError, 'Message is too short.' if message.bytesize < len + offset
+
         key = message[0...len + offset]
         message = message[(len + offset)..]
         key = @symmetric_state.decrypt_and_hash(key) if is_encrypted

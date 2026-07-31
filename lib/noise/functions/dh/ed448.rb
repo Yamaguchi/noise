@@ -1,12 +1,17 @@
 # frozen_string_literal: true
 
-require_force('ed448') { Ed448.init }
+Noise.require_optional('ed448') { Ed448.init }
 
 module Noise
   module Functions
     module DH
       class ED448
-        DHLEN = Ed448::X448::X448_PRIVATE_BYTES
+        # Ed448::X448::X448_PRIVATE_BYTES, spelled out so this file loads without the gem.
+        DHLEN = 56
+
+        def initialize
+          Noise.optional_dependency!('ed448')
+        end
 
         def generate_keypair
           private_key = SecureRandom.random_bytes(DHLEN)

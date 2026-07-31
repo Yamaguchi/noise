@@ -2,6 +2,8 @@
 
 require 'spec_helper'
 
+using Noise::Utils::HexString
+
 RSpec.describe Noise::Functions::Hash do
   describe '.hmac_hash' do
     subject { described_class.hmac_hash(key, data, digest).bth }
@@ -35,7 +37,10 @@ RSpec.describe Noise::Functions::Hash do
   end
 
   describe '.hkdf' do
-    subject { described_class.hkdf(chaining_key, input_key_material, num_outputs, digest).map(&:bth) }
+    # Symbol#to_proc does not see refinements, so bth needs an explicit block.
+    subject do
+      described_class.hkdf(chaining_key, input_key_material, num_outputs, digest).map { |output| output.bth } # rubocop:disable Style/SymbolProc
+    end
 
     context 'SHA256 - num_outputs=2' do
       let(:chaining_key) { '4e6f6973655f4e4e5f32353531395f41455347434d5f53484132353600000000'.htb }
@@ -109,5 +114,12 @@ RSpec.describe Noise::Functions::Hash do
 
       it { is_expected.to eq expected }
     end
+  end
+
+  describe '.hmac_hash with an unsupported digest' do
+    it {
+      expect { described_class.hmac_hash('key', 'data', 'MD5') }
+        .to raise_error(Noise::Exceptions::ProtocolNameError, 'Unsupported hash function: MD5')
+    }
   end
 end

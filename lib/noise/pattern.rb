@@ -88,29 +88,39 @@ module Noise
     class Fallback
     end
 
+    PSK_REGEX = /\Apsk(\d+)\z/
+
     def self.parse(s)
-      if s.start_with?('psk')
-        index = s.gsub(/psk/, '').to_i
-        Modifier::Psk.new(index)
-      elsif s == 'fallback'
-        Modifier::Fallback.new
-      else
-        raise Noise::Exceptions::UnsupportedModifierError
-      end
+      matched = PSK_REGEX.match(s)
+      return Modifier::Psk.new(matched[1].to_i) if matched
+      return Modifier::Fallback.new if s == 'fallback'
+
+      raise Noise::Exceptions::UnsupportedModifierError, "Unsupported modifier: #{s}"
     end
   end
 
   class Pattern
-    attr_reader :tokens, :modifiers, :psk_count, :fallback
+    attr_reader :name, :tokens, :modifiers, :psk_count, :fallback
+
+    NAME_REGEX = /\A([A-Z1]+)([^A-Z]*)\z/
 
     def self.create(name)
-      pattern_set = name.scan(/([A-Z1]+)([^A-Z]*)/)&.first
-      pattern = pattern_set&.first
-      modifiers = pattern_set[1].split('+').map { |s| Modifier.parse(s) }
-      class_name = "Noise::Pattern#{pattern}"
-      klass = Object.const_get(class_name)
-      klass.new(modifiers)
+      matched = NAME_REGEX.match(name)
+      raise Noise::Exceptions::ProtocolNameError, "Malformed pattern name: #{name}" unless matched
+
+      modifiers = matched[2].split('+').map { |s| Modifier.parse(s) }
+      pattern_class(matched[1]).new(modifiers)
     end
+
+    def self.pattern_class(pattern)
+      klass = Object.const_get("Noise::Pattern#{pattern}")
+      raise NameError unless klass.is_a?(Class) && klass < Pattern
+
+      klass
+    rescue NameError
+      raise Noise::Exceptions::ProtocolNameError, "Unsupported pattern: #{pattern}"
+    end
+    private_class_method :pattern_class
 
     def initialize(modifiers)
       @pre_messages = [[], []]
@@ -129,7 +139,8 @@ module Noise
         case modifier
         when Modifier::Psk
           index = modifier.index
-          raise Noise::Exceptions::PSKValueError if index / 2 > @tokens.size
+          # psk0 prepends to the first message, pskN appends to the Nth one.
+          raise Noise::Exceptions::PSKValueError if index > @tokens.size
 
           if index.zero?
             @tokens[0].insert(0, Token::PSK)
@@ -150,24 +161,48 @@ module Noise
 
     def required_keypairs_of_initiator
       required = []
-      required << :s if %w[K X I].include?(@name[0])
-      required << :rs if one_way? || @name[1] == 'K'
+      required << :s if initiator_static?
+      required << :rs if responder_static_pre_shared?
       required
     end
 
     def required_keypairs_of_responder
       required = []
-      required << :rs if @name[0] == 'K'
-      required << :s if one_way? || %w[K X].include?(@name[1])
+      required << :rs if initiator_static_pre_shared?
+      required << :s if responder_static?
       required
     end
 
     def initiator_pre_messages
-      @pre_messages[0].dup
+      (@pre_messages[0] || []).dup
     end
 
     def responder_pre_messages
-      @pre_messages[1].dup
+      (@pre_messages[1] || []).dup
+    end
+
+    # A party needs a static keypair when its static public key is either pre-shared with the peer or
+    # transmitted during the handshake. Deriving this from the pattern itself keeps deferred patterns
+    # (whose names carry a '1', e.g. X1K) working, unlike inspecting single characters of the name.
+    def initiator_static?
+      initiator_static_pre_shared? || sends_static?(0)
+    end
+
+    def responder_static?
+      responder_static_pre_shared? || sends_static?(1)
+    end
+
+    def initiator_static_pre_shared?
+      initiator_pre_messages.include?(Token::S)
+    end
+
+    def responder_static_pre_shared?
+      responder_pre_messages.include?(Token::S)
+    end
+
+    # The initiator writes the messages at even indexes, the responder the ones at odd indexes.
+    def sends_static?(offset)
+      offset.step(@tokens.size - 1, 2).any? { |i| @tokens[i].include?(Token::S) }
     end
 
     def one_way?

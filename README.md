@@ -59,6 +59,12 @@ After installing, define an environment variable as follows:
 
          $ export LIBGOLDILOCKS=/usr/local/lib/libgoldilocks.so
 
+and, add this line to your Gemfile:
+
+```
+gem 'ed448'
+```
+
 If you use Secp256k1, you must install [libsecp256k1](https://github.com/bitcoin-core/secp256k1).
 
     $ git clone https://github.com/bitcoin-core/secp256k1

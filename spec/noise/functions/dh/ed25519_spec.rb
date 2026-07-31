@@ -2,6 +2,8 @@
 
 require 'spec_helper'
 
+using Noise::Utils::HexString
+
 RSpec.describe Noise::Functions::DH::ED25519 do
   # https://tools.ietf.org/html/rfc7748#section-6.1
   describe '#dh' do

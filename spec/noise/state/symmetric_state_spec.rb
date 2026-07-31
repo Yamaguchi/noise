@@ -2,6 +2,8 @@
 
 require 'spec_helper'
 
+using Noise::Utils::HexString
+
 RSpec.describe Noise::State::SymmetricState do
   let(:state) do
     connection = Noise::Connection::Initiator.new('Noise_XKpsk3_25519_ChaChaPoly_SHA256')

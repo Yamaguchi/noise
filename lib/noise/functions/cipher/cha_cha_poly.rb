@@ -20,8 +20,9 @@ module Noise
           raise Noise::Exceptions::DecryptError, "Decrpyt failed. #{e.message}", e.backtrace
         end
 
+        # 4 zero bytes followed by n as a little-endian 64 bit integer.
         def nonce_to_bytes(n)
-          "\x00" * 4 + format('%16x', n).htb.reverse
+          "\x00" * 4 + [n].pack('Q<')
         end
 
         # Returns a new 32-byte cipher key as a pseudorandom function of k.
@@ -31,7 +32,7 @@ module Noise
         # zerolen is a zero-length byte sequence, and zeros is a sequence of
         # 32 bytes filled with zeros.
         def rekey(k)
-          encrypt(k, MAX_NONCE, '', "\x00" * 32)[0..32]
+          encrypt(k, MAX_NONCE, '', "\x00" * 32)[0...32]
         end
       end
     end

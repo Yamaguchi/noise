@@ -2,6 +2,8 @@
 
 require 'spec_helper'
 
+using Noise::Utils::HexString
+
 RSpec.describe Noise::Functions::Hash::Blake2s do
   describe 'blake2s_hash' do
     subject { Noise::Functions::Hash::Blake2sDigester.new(key: key).update(data).digest.bth }

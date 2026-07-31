@@ -3,6 +3,9 @@
 module Noise
   module Connection
     class Base
+      # The Noise spec caps a handshake or transport message at 65535 bytes.
+      MAX_MESSAGE_LENGTH = 65_535
+
       attr_reader :protocol, :handshake_started, :handshake_finished, :handshake_hash, :handshake_state,
                   :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake, :s, :rs
       attr_accessor :psks, :prologue
@@ -26,11 +29,15 @@ module Noise
         @handshake_started = true
       end
 
+      # Restarts the handshake with a fallback pattern, carrying over the keys of the aborted one.
+      #
+      # The roles swap here: the party that wrote the aborted message now reads, and the one that
+      # failed to read it now writes. Both sides are already in that state, so @next_message is
+      # deliberately left as it is rather than reset through initialize_next_message.
       def fallback(fallback_name)
         @protocol = Protocol.create(fallback_name)
         @handshake_started = false
         @handshake_finished = false
-        # initialize_next_message
         @local_keypairs = { e: @handshake_state.e, s: @handshake_state.s }
         @remote_keys = { re: @handshake_state.re, rs: @handshake_state.rs }
         start_handshake
@@ -54,10 +61,13 @@ module Noise
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :write
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
 
+        if @handshake_state.expected_message_length(payload.bytesize) > MAX_MESSAGE_LENGTH
+          raise Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.'
+        end
+
         @next_message = :read
         buffer = +''
-        result = @handshake_state.write_message(payload, buffer)
-        @handshake_finished = true if result
+        @handshake_finished = @handshake_state.write_message(payload, buffer)
         buffer
       end
 
@@ -66,11 +76,12 @@ module Noise
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :read
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
+        raise Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.' if
+          data.bytesize > MAX_MESSAGE_LENGTH
 
         @next_message = :write
         buffer = +''
-        result = @handshake_state.read_message(data, buffer)
-        @handshake_finished = true if result
+        @handshake_finished = @handshake_state.read_message(data, buffer)
         buffer
       end
 
@@ -92,7 +103,7 @@ module Noise
         raise Noise::Exceptions::NoisePSKError if @protocol.pattern.psk_count != @psks.count
       end
 
-      def valid_keypairs?
+      def missing_keypairs?
         keypairs = @local_keypairs.merge(@remote_keys)
         @protocol.pattern.required_keypairs(initiator?).any? { |keypair| !keypairs[keypair] }
       end
@@ -100,7 +111,7 @@ module Noise
       def validate
         validate_psk! if @protocol.psk?
 
-        raise Noise::Exceptions::NoiseValidationError if valid_keypairs?
+        raise Noise::Exceptions::NoiseValidationError if missing_keypairs?
 
         true
       end
