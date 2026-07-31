@@ -215,5 +215,56 @@ RSpec.describe Noise::Protocol do
 
       it { is_expected.to eq [:s] }
     end
+
+    describe 'X1K(initiator)' do
+      let(:initiator) { true }
+      let(:name) { 'X1K' }
+
+      it { is_expected.to eq %i[s rs] }
+    end
+
+    describe 'X1K(responder)' do
+      let(:initiator) { false }
+      let(:name) { 'X1K' }
+
+      it { is_expected.to eq [:s] }
+    end
+
+    describe 'K1X(initiator)' do
+      let(:initiator) { true }
+      let(:name) { 'K1X' }
+
+      it { is_expected.to eq [:s] }
+    end
+
+    describe 'K1X(responder)' do
+      let(:initiator) { false }
+      let(:name) { 'K1X' }
+
+      it { is_expected.to eq %i[rs s] }
+    end
+  end
+
+  # A deferred pattern only postpones DH operations, so it needs exactly the same keypairs as the
+  # fundamental pattern it derives from.
+  describe '#required_keypairs of deferred patterns' do
+    {
+      'NK1' => 'NK', 'NX1' => 'NX',
+      'X1N' => 'XN', 'X1K' => 'XK', 'XK1' => 'XK', 'X1K1' => 'XK',
+      'X1X' => 'XX', 'XX1' => 'XX', 'X1X1' => 'XX',
+      'K1N' => 'KN', 'K1K' => 'KK', 'KK1' => 'KK', 'K1K1' => 'KK',
+      'K1X' => 'KX', 'KX1' => 'KX', 'K1X1' => 'KX',
+      'I1N' => 'IN', 'I1K' => 'IK', 'IK1' => 'IK', 'I1K1' => 'IK',
+      'I1X' => 'IX', 'IX1' => 'IX', 'I1X1' => 'IX'
+    }.each do |deferred, fundamental|
+      describe deferred do
+        it "requires the same keypairs as #{fundamental}" do
+          expect(Noise::Pattern.create(deferred).required_keypairs(true))
+            .to eq Noise::Pattern.create(fundamental).required_keypairs(true)
+          expect(Noise::Pattern.create(deferred).required_keypairs(false))
+            .to eq Noise::Pattern.create(fundamental).required_keypairs(false)
+        end
+      end
+    end
   end
 end

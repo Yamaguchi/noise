@@ -52,5 +52,22 @@ RSpec.describe Noise::Connection do
         it { expect { subject }.to raise_error(Noise::Exceptions::NoiseValidationError) }
       end
     end
+
+    context 'deferred pattern' do
+      let(:name) { 'Noise_X1K_25519_AESGCM_SHA256' }
+
+      context 'valid' do
+        let(:keypairs) { { s: ('00' * 32).htb, e: nil, rs: ('00' * 32).htb, re: nil } }
+
+        it { is_expected.to be true }
+      end
+
+      # X1K pre-shares the responder's static key, so the initiator must know rs.
+      context 'missing remote static key' do
+        let(:keypairs) { { s: ('00' * 32).htb, e: nil, rs: nil, re: nil } }
+
+        it { expect { subject }.to raise_error(Noise::Exceptions::NoiseValidationError) }
+      end
+    end
   end
 end
