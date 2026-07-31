@@ -14,7 +14,7 @@ module Noise
 
       attr_reader :k, :n
 
-      def initialize(cipher: AesGcm.new)
+      def initialize(cipher:)
         @cipher = cipher
       end
 
