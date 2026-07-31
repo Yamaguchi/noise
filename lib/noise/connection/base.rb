@@ -86,15 +86,56 @@ module Noise
       end
 
       def encrypt(data)
-        raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
-
-        @cipher_state_encrypt.encrypt_with_ad('', data)
+        transport_cipher_state(:encrypt).encrypt_with_ad('', data)
       end
 
       def decrypt(data)
-        raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
+        transport_cipher_state(:decrypt).decrypt_with_ad('', data)
+      end
 
-        @cipher_state_decrypt.decrypt_with_ad('', data)
+      # @return [Integer] the nonce the next #encrypt call uses.
+      def encryption_nonce
+        transport_cipher_state(:encrypt).n
+      end
+
+      # @return [Integer] the nonce the next #decrypt call uses.
+      def decryption_nonce
+        transport_cipher_state(:decrypt).n
+      end
+
+      # Sets the nonce of the next #encrypt call. Needed when the transport layer numbers the
+      # messages itself instead of relying on the sender and the receiver counting in step.
+      #
+      # @param [Integer] nonce a value between 0 and CipherState::MAX_NONCE.
+      def encryption_nonce=(nonce)
+        transport_cipher_state(:encrypt).nonce = nonce
+      end
+
+      # Sets the nonce of the next #decrypt call. This is how the Noise spec handles transport
+      # messages that arrive out of order: the receiver sets n to the nonce of the message it is
+      # about to decrypt, and restores the previous value if the message fails to authenticate.
+      #
+      # @param [Integer] nonce a value between 0 and CipherState::MAX_NONCE.
+      def decryption_nonce=(nonce)
+        transport_cipher_state(:decrypt).nonce = nonce
+      end
+
+      # Replaces the key used by #encrypt with REKEY(k), so that the old key cannot decrypt the
+      # messages that follow. Both parties must rekey the matching direction at the same point of
+      # the message stream, which is up to the application protocol to agree on.
+      #
+      # @return [void]
+      def rekey_encryption
+        transport_cipher_state(:encrypt).rekey
+        nil
+      end
+
+      # Replaces the key used by #decrypt with REKEY(k). See #rekey_encryption.
+      #
+      # @return [void]
+      def rekey_decryption
+        transport_cipher_state(:decrypt).rekey
+        nil
       end
 
       def validate_psk!
@@ -123,6 +164,23 @@ module Noise
         @handshake_state = nil
         @symmetric_state = nil
         @cipher_state_handshake = nil
+      end
+
+      private
+
+      # Returns the transport CipherState of the given direction.
+      #
+      # One-way patterns leave the direction the caller cannot use as nil, so the absence of a
+      # cipher state is reported the same way as a handshake that has not finished yet.
+      #
+      # @param [Symbol] direction :encrypt or :decrypt.
+      def transport_cipher_state(direction)
+        raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
+
+        cipher_state = direction == :encrypt ? @cipher_state_encrypt : @cipher_state_decrypt
+        raise Noise::Exceptions::NoiseHandshakeError, "This party cannot #{direction} messages." unless cipher_state
+
+        cipher_state
       end
     end
   end

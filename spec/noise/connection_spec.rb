@@ -129,4 +129,105 @@ RSpec.describe Noise::Connection do
       }
     end
   end
+
+  describe 'transport nonce' do
+    let(:name) { 'Noise_NN_25519_AESGCM_SHA256' }
+    let(:initiator) { Noise::Connection::Initiator.new(name) }
+    let(:responder) { Noise::Connection::Responder.new(name) }
+
+    before do
+      initiator.start_handshake
+      responder.start_handshake
+      responder.read_message(initiator.write_message(''))
+      initiator.read_message(responder.write_message(''))
+    end
+
+    it 'starts at zero and counts the transport messages' do
+      expect(initiator.encryption_nonce).to eq 0
+      initiator.encrypt('first')
+      expect(initiator.encryption_nonce).to eq 1
+      expect(responder.decryption_nonce).to eq 0
+    end
+
+    it 'lets the receiver decrypt messages that arrive out of order' do
+      first = initiator.encrypt('first')
+      second = initiator.encrypt('second')
+
+      responder.decryption_nonce = 1
+      expect(responder.decrypt(second)).to eq 'second'
+      responder.decryption_nonce = 0
+      expect(responder.decrypt(first)).to eq 'first'
+    end
+
+    it 'rejects a nonce outside the unsigned 64-bit range' do
+      expect { responder.decryption_nonce = 2**64 }.to raise_error(Noise::Exceptions::InvalidNonceError)
+      expect { initiator.encryption_nonce = -1 }.to raise_error(Noise::Exceptions::InvalidNonceError)
+      expect(responder.decryption_nonce).to eq 0
+    end
+
+    context 'before the handshake finishes' do
+      let(:fresh) { Noise::Connection::Initiator.new(name) }
+
+      it { expect { fresh.encryption_nonce = 1 }.to raise_error(Noise::Exceptions::NoiseHandshakeError) }
+      it { expect { fresh.decryption_nonce }.to raise_error(Noise::Exceptions::NoiseHandshakeError) }
+    end
+  end
+
+  describe 'transport rekey' do
+    let(:name) { 'Noise_NN_25519_AESGCM_SHA256' }
+    let(:initiator) { Noise::Connection::Initiator.new(name) }
+    let(:responder) { Noise::Connection::Responder.new(name) }
+
+    before do
+      initiator.start_handshake
+      responder.start_handshake
+      responder.read_message(initiator.write_message(''))
+      initiator.read_message(responder.write_message(''))
+    end
+
+    it 'keeps both parties in sync when the matching directions rekey' do
+      initiator.rekey_encryption
+      responder.rekey_decryption
+
+      expect(responder.decrypt(initiator.encrypt('after rekey'))).to eq 'after rekey'
+    end
+
+    it 'does not reset the nonce' do
+      initiator.encrypt('first')
+      initiator.rekey_encryption
+
+      expect(initiator.encryption_nonce).to eq 1
+    end
+
+    it 'makes the message undecryptable for a receiver that did not rekey' do
+      initiator.rekey_encryption
+
+      expect { responder.decrypt(initiator.encrypt('after rekey')) }
+        .to raise_error(Noise::Exceptions::DecryptError)
+    end
+  end
+
+  describe 'one-way pattern' do
+    let(:name) { 'Noise_N_25519_AESGCM_SHA256' }
+    let(:static) { Noise::Protocol.create(name).dh_fn.class.from_private(('11' * 32).htb) }
+    let(:initiator) { Noise::Connection::Initiator.new(name, keypairs: { rs: static.public_key }) }
+    let(:responder) { Noise::Connection::Responder.new(name, keypairs: { s: static.private_key }) }
+
+    before do
+      initiator.start_handshake
+      responder.start_handshake
+      responder.read_message(initiator.write_message(''))
+    end
+
+    it 'has no cipher state for the direction the party cannot use' do
+      expect { initiator.rekey_decryption }
+        .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'This party cannot decrypt messages.')
+      expect { initiator.decrypt('') }
+        .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'This party cannot decrypt messages.')
+      expect { responder.rekey_encryption }
+        .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'This party cannot encrypt messages.')
+      expect { responder.encryption_nonce }
+        .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'This party cannot encrypt messages.')
+    end
+  end
 end

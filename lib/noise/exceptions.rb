@@ -4,6 +4,7 @@ module Noise
   module Exceptions
     autoload :DecryptError, 'noise/exceptions/decrypt_error'
     autoload :EncryptError, 'noise/exceptions/encrypt_error'
+    autoload :InvalidNonceError, 'noise/exceptions/invalid_nonce_error'
     autoload :InvalidPublicKeyError, 'noise/exceptions/invalid_public_key_error'
     autoload :MaxNonceError, 'noise/exceptions/max_nonce_error'
     autoload :MissingDependencyError, 'noise/exceptions/missing_dependency_error'
