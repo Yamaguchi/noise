@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
-require_force 'secp256k1'
+Noise.require_optional 'secp256k1'
 
 module Noise
   module Functions
     module DH
       class Secp256k1
+        def initialize
+          Noise.optional_dependency!('secp256k1')
+        end
+
         def generate_keypair
           group = ECDSA::Group::Secp256k1
           private_key = 1 + SecureRandom.random_number(group.order - 1)

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_force 'blake3'
+Noise.require_optional 'blake3'
 
 module Noise
   module Functions
@@ -8,6 +8,11 @@ module Noise
       class Blake3
         HASHLEN = 32
         BLOCKLEN = 64
+
+        def initialize
+          Noise.optional_dependency!('blake3')
+        end
+
         def hash(data)
           ::Blake3.digest(data)
         end
