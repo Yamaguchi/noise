@@ -23,7 +23,7 @@ module Noise
         def dh(private_key, public_key)
           key = ::Secp256k1::PublicKey.new(pubkey: public_key, raw: true)
           key.ecdh(private_key)
-        rescue ::Secp256k1::AssertError => _e
+        rescue ::Secp256k1::AssertError
           raise Noise::Exceptions::InvalidPublicKeyError, public_key
         end
 
