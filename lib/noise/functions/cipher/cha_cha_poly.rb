@@ -31,7 +31,7 @@ module Noise
         # zerolen is a zero-length byte sequence, and zeros is a sequence of
         # 32 bytes filled with zeros.
         def rekey(k)
-          encrypt(k, MAX_NONCE, '', "\x00" * 32)[0..32]
+          encrypt(k, MAX_NONCE, '', "\x00" * 32)[0...32]
         end
       end
     end

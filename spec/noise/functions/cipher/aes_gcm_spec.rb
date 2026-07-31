@@ -32,4 +32,17 @@ RSpec.describe Noise::Functions::Cipher::AesGcm do
 
     it { is_expected.to eq plaintext }
   end
+
+  describe '#rekey' do
+    subject { cipher.rekey(k) }
+
+    let(:cipher) { described_class.new }
+    let(:k) { '36b4b54fdef654f67adface4d65b1be19880031bdad72dff5909b9e63a4dcb68'.htb }
+
+    it { expect(subject.bytesize).to eq 32 }
+
+    it {
+      expect(subject.bth).to eq 'fa6389ae59ea478a40fd68b33ec2273573090b6492d8d90f604d283ed6d2e338'
+    }
+  end
 end

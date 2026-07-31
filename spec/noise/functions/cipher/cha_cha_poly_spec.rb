@@ -38,4 +38,17 @@ RSpec.describe Noise::Functions::Cipher::ChaChaPoly do
 
     it { is_expected.to eq plaintext }
   end
+
+  describe '#rekey' do
+    subject { cipher.rekey(k) }
+
+    let(:cipher) { described_class.new }
+    let(:k) { '36b4b54fdef654f67adface4d65b1be19880031bdad72dff5909b9e63a4dcb68'.htb }
+
+    it { expect(subject.bytesize).to eq 32 }
+
+    it {
+      expect(subject.bth).to eq '3a1fd0e0f2af6b92dd0cf922fb60d0da2cb83cd92ea9c586100be673ef260af6'
+    }
+  end
 end
