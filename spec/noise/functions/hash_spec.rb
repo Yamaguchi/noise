@@ -110,4 +110,11 @@ RSpec.describe Noise::Functions::Hash do
       it { is_expected.to eq expected }
     end
   end
+
+  describe '.hmac_hash with an unsupported digest' do
+    it {
+      expect { described_class.hmac_hash('key', 'data', 'MD5') }
+        .to raise_error(Noise::Exceptions::ProtocolNameError, 'Unsupported hash function: MD5')
+    }
+  end
 end
