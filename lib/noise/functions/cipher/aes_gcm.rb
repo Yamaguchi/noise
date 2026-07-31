@@ -27,8 +27,9 @@ module Noise
           raise Noise::Exceptions::DecryptError, "Decrpyt failed. #{e.message}", e.backtrace
         end
 
+        # 4 zero bytes followed by n as a big-endian 64 bit integer.
         def nonce_to_bytes(n)
-          "\x00" * 4 + format('%16x', n).htb
+          "\x00" * 4 + [n].pack('Q>')
         end
 
         # Returns a new 32-byte cipher key as a pseudorandom function of k.
