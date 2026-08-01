@@ -35,7 +35,6 @@ Gem::Specification.new do |spec|
   # each also needs a system library that cannot be installed as a gem, so none of them is a runtime
   # dependency. Add the one you need to your own Gemfile; see the README for the system libraries.
   spec.add_development_dependency 'blake3'
-  spec.add_development_dependency 'ed448'
   spec.add_development_dependency 'secp256k1-ruby'
 
   spec.add_runtime_dependency 'ecdsa'
