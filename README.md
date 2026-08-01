@@ -47,24 +47,6 @@ Or install it yourself as:
 
     $ gem install noise-ruby
 
-If you use Ed448 as DH function, you must install [libgoldilocks](https://github.com/otrv4/libgoldilocks).
-
-After installing, define an environment variable as follows:
-
-   * on macOS
-
-         $ export LIBGOLDILOCKS=/usr/local/lib/libgoldilocks.dylib
-
-   * on Linux(Ubuntu)
-
-         $ export LIBGOLDILOCKS=/usr/local/lib/libgoldilocks.so
-
-and, add this line to your Gemfile:
-
-```
-gem 'ed448'
-```
-
 If you use Secp256k1, you must install [libsecp256k1](https://github.com/bitcoin-core/secp256k1).
 
     $ git clone https://github.com/bitcoin-core/secp256k1
