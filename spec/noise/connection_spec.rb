@@ -266,6 +266,10 @@ RSpec.describe Noise::Connection do
       responder.read_message(initiator.write_message(''))
     end
 
+    it 'lets the initiator send transport messages' do
+      expect(responder.decrypt(initiator.encrypt('hello'))).to eq 'hello'
+    end
+
     it 'has no cipher state for the direction the party cannot use' do
       expect { initiator.rekey_decryption }
         .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'This party cannot decrypt messages.')
@@ -274,6 +278,8 @@ RSpec.describe Noise::Connection do
       expect { responder.rekey_encryption }
         .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'This party cannot encrypt messages.')
       expect { responder.encryption_nonce }
+        .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'This party cannot encrypt messages.')
+      expect { responder.encrypt('hello') }
         .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'This party cannot encrypt messages.')
     end
   end
