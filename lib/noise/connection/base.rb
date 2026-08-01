@@ -3,15 +3,15 @@
 module Noise
   module Connection
     class Base
-      # Raised when the responder of a one-way pattern tries to send a transport message.
-      ONE_WAY_SEND_ERROR = 'Responder cannot send transport messages in a one-way pattern.'
-      # Raised when the initiator of a one-way pattern tries to receive a transport message.
-      ONE_WAY_RECEIVE_ERROR = 'Initiator cannot receive transport messages in a one-way pattern.'
+      # The Noise spec caps a handshake or transport message at 65535 bytes. A transport message is
+      # the ciphertext, so the plaintext a caller may hand to encrypt is shorter by the
+      # authentication tag that ENCRYPT() appends.
+      MAX_MESSAGE_LENGTH = 65_535
+      MAX_PLAINTEXT_LENGTH = MAX_MESSAGE_LENGTH - Noise::State::CipherState::TAG_LENGTH
 
-      attr_reader :protocol, :handshake_started, :handshake_finished, :handshake_hash, :handshake_state
-      attr_reader :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake
+      attr_reader :protocol, :handshake_started, :handshake_finished, :handshake_hash, :handshake_state,
+                  :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake, :s, :rs
       attr_accessor :psks, :prologue
-      attr_reader :s, :rs
 
       def initialize(name, keypairs: { s: nil, e: nil, rs: nil, re: nil })
         @protocol = Protocol.create(name)
@@ -32,11 +32,15 @@ module Noise
         @handshake_started = true
       end
 
+      # Restarts the handshake with a fallback pattern, carrying over the keys of the aborted one.
+      #
+      # The roles swap here: the party that wrote the aborted message now reads, and the one that
+      # failed to read it now writes. Both sides are already in that state, so @next_message is
+      # deliberately left as it is rather than reset through initialize_next_message.
       def fallback(fallback_name)
         @protocol = Protocol.create(fallback_name)
         @handshake_started = false
         @handshake_finished = false
-        # initialize_next_message
         @local_keypairs = { e: @handshake_state.e, s: @handshake_state.s }
         @remote_keys = { re: @handshake_state.re, rs: @handshake_state.rs }
         start_handshake
@@ -60,10 +64,13 @@ module Noise
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :write
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
 
+        if @handshake_state.expected_message_length(payload.bytesize) > MAX_MESSAGE_LENGTH
+          raise Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.'
+        end
+
         @next_message = :read
         buffer = +''
-        result = @handshake_state.write_message(payload, buffer)
-        @handshake_finished = true if result
+        @handshake_finished = @handshake_state.write_message(payload, buffer)
         buffer
       end
 
@@ -72,41 +79,95 @@ module Noise
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :read
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
+        raise Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.' if
+          data.bytesize > MAX_MESSAGE_LENGTH
 
         @next_message = :write
         buffer = +''
-        result = @handshake_state.read_message(data, buffer)
-        @handshake_finished = true if result
+        @handshake_finished = @handshake_state.read_message(data, buffer)
         buffer
       end
 
-      # Encrypts a transport message with the sending cipher state.
-      # In a one-way pattern only the initiator sends, so the responder has no sending cipher state
-      # and calling this raises NoiseHandshakeError instead of failing on a nil cipher state.
       def encrypt(data)
-        raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
-        raise Noise::Exceptions::NoiseHandshakeError, ONE_WAY_SEND_ERROR unless @cipher_state_encrypt
+        cipher_state = transport_cipher_state(:encrypt)
+        if data.bytesize > MAX_PLAINTEXT_LENGTH
+          raise Noise::Exceptions::MessageTooLongError,
+                "Plaintext is #{data.bytesize} bytes, which exceeds the maximum of #{MAX_PLAINTEXT_LENGTH}."
+        end
 
-        @cipher_state_encrypt.encrypt_with_ad('', data)
+        cipher_state.encrypt_with_ad('', data)
       end
 
-      # Decrypts a transport message with the receiving cipher state.
-      # In a one-way pattern the responder never sends, so the initiator has no receiving cipher
-      # state and calling this raises NoiseHandshakeError instead of failing on a nil cipher state.
       def decrypt(data)
-        raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
-        raise Noise::Exceptions::NoiseHandshakeError, ONE_WAY_RECEIVE_ERROR unless @cipher_state_decrypt
+        cipher_state = transport_cipher_state(:decrypt)
+        # Rejected before the cipher state is used, so an over-long message leaves n untouched
+        # and the connection usable, exactly as a failed decryption does.
+        if data.bytesize > MAX_MESSAGE_LENGTH
+          raise Noise::Exceptions::MessageTooLongError,
+                "Message is #{data.bytesize} bytes, which exceeds the maximum of #{MAX_MESSAGE_LENGTH}."
+        end
 
-        @cipher_state_decrypt.decrypt_with_ad('', data)
+        cipher_state.decrypt_with_ad('', data)
+      end
+
+      # @return [Integer] the nonce the next #encrypt call uses.
+      def encryption_nonce
+        transport_cipher_state(:encrypt).n
+      end
+
+      # @return [Integer] the nonce the next #decrypt call uses.
+      def decryption_nonce
+        transport_cipher_state(:decrypt).n
+      end
+
+      # Sets the nonce of the next #encrypt call. Needed when the transport layer numbers the
+      # messages itself instead of relying on the sender and the receiver counting in step.
+      #
+      # @param [Integer] nonce a value between 0 and CipherState::MAX_NONCE.
+      def encryption_nonce=(nonce)
+        transport_cipher_state(:encrypt).nonce = nonce
+      end
+
+      # Sets the nonce of the next #decrypt call. This is how the Noise spec handles transport
+      # messages that arrive out of order: the receiver sets n to the nonce of the message it is
+      # about to decrypt, and restores the previous value if the message fails to authenticate.
+      #
+      # @param [Integer] nonce a value between 0 and CipherState::MAX_NONCE.
+      def decryption_nonce=(nonce)
+        transport_cipher_state(:decrypt).nonce = nonce
+      end
+
+      # Replaces the key used by #encrypt with REKEY(k), so that the old key cannot decrypt the
+      # messages that follow. Both parties must rekey the matching direction at the same point of
+      # the message stream, which is up to the application protocol to agree on.
+      #
+      # @return [void]
+      def rekey_encryption
+        transport_cipher_state(:encrypt).rekey
+        nil
+      end
+
+      # Replaces the key used by #decrypt with REKEY(k). See #rekey_encryption.
+      #
+      # @return [void]
+      def rekey_decryption
+        transport_cipher_state(:decrypt).rekey
+        nil
       end
 
       def validate_psk!
+        raise Noise::Exceptions::NoisePSKError, 'psks are not set.' if @psks.nil?
         # Invalid psk length! Has to be 32 bytes long
-        raise Noise::Exceptions::NoisePSKError if @psks.any? { |psk| psk.bytesize != 32 }
-        raise Noise::Exceptions::NoisePSKError if @protocol.pattern.psk_count != @psks.count
+        raise Noise::Exceptions::NoisePSKError, 'psks have to be 32 bytes long.' if
+          @psks.any? { |psk| psk.bytesize != 32 }
+
+        return if @protocol.pattern.psk_count == @psks.count
+
+        raise Noise::Exceptions::NoisePSKError,
+              "This protocol needs #{@protocol.pattern.psk_count} psks, got #{@psks.count}."
       end
 
-      def valid_keypairs?
+      def missing_keypairs?
         keypairs = @local_keypairs.merge(@remote_keys)
         @protocol.pattern.required_keypairs(initiator?).any? { |keypair| !keypairs[keypair] }
       end
@@ -114,7 +175,7 @@ module Noise
       def validate
         validate_psk! if @protocol.psk?
 
-        raise Noise::Exceptions::NoiseValidationError if valid_keypairs?
+        raise Noise::Exceptions::NoiseValidationError if missing_keypairs?
 
         true
       end
@@ -126,6 +187,23 @@ module Noise
         @handshake_state = nil
         @symmetric_state = nil
         @cipher_state_handshake = nil
+      end
+
+      private
+
+      # Returns the transport CipherState of the given direction.
+      #
+      # One-way patterns leave the direction the caller cannot use as nil, so the absence of a
+      # cipher state is reported the same way as a handshake that has not finished yet.
+      #
+      # @param [Symbol] direction :encrypt or :decrypt.
+      def transport_cipher_state(direction)
+        raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
+
+        cipher_state = direction == :encrypt ? @cipher_state_encrypt : @cipher_state_decrypt
+        raise Noise::Exceptions::NoiseHandshakeError, "This party cannot #{direction} messages." unless cipher_state
+
+        cipher_state
       end
     end
   end

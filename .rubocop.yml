@@ -1,14 +1,10 @@
-Metrics/BlockLength:
+require:
+  - rubocop-rspec
+Metrics:
   Enabled: false
 
-Metrics/LineLength:
+Layout/LineLength:
   Max: 120
-
-Metrics/MethodLength:
-  Max: 30
-
-Metrics/AbcSize:
-  Max: 20
 
 Style/Documentation:
   Enabled: false
@@ -23,7 +19,30 @@ Style/WordArray:
   MinSize: 100
 
 AllCops:
-  TargetRubyVersion: 2.4.1
+  TargetRubyVersion: 3.0
+  SuggestExtensions: false
 
-Naming/UncommunicativeMethodParamName:
+Naming/MethodParameterName:
     MinNameLength: 1
+
+RSpec:
+  Exclude:
+    - "spec/factories/*"
+RSpec/AnyInstance:
+  Enabled: false
+RSpec/ContextWording:
+  Enabled: false
+RSpec/ExampleLength:
+  Enabled: false
+RSpec/MultipleExpectations:
+  Enabled: false
+RSpec/NamedSubject:
+  Enabled: false
+RSpec/NestedGroups:
+  Enabled: false
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+RSpec/SpecFilePathFormat:
+  Enabled: false
+RSpec/IndexedLet:
+  Enabled: false

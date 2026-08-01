@@ -2,16 +2,17 @@
 
 require 'spec_helper'
 
+using Noise::Utils::HexString
+
 require 'json'
-require 'pp'
 
 RSpec.describe 'Vectors' do
   def to_keypair_value(enum, v, role)
     key =
       case enum
-      when Noise::KeyPair::STATIC then (role + '_static').to_sym
-      when Noise::KeyPair::EPHEMERAL then (role + '_ephemeral').to_sym
-      when Noise::KeyPair::REMOTE_STATIC then (role + '_remote_static').to_sym
+      when Noise::KeyPair::STATIC then "#{role}_static".to_sym
+      when Noise::KeyPair::EPHEMERAL then "#{role}_ephemeral".to_sym
+      when Noise::KeyPair::REMOTE_STATIC then "#{role}_remote_static".to_sym
       end
     v[key]
   end
@@ -35,7 +36,7 @@ RSpec.describe 'Vectors' do
     'snow.txt',
     'lightning.txt',
     'noise-c-basic.txt',
-    'noise-c-fallback.txt',
+    'noise-c-fallback.txt'
     # 'noise-c-hybrid.txt'
   ]
   vectors =
@@ -58,8 +59,11 @@ RSpec.describe 'Vectors' do
           keypairs_resp = get_keypairs(v, false)
           responder = Noise::Connection::Responder.new(protocol_name, keypairs: keypairs_resp)
           if v.key?(:init_psks) && v.key?(:resp_psks)
-            initiator.psks = v[:init_psks].map(&:htb)
-            responder.psks = v[:resp_psks].map(&:htb)
+            # Symbol#to_proc does not see refinements, so htb needs an explicit block.
+            # rubocop:disable Style/SymbolProc
+            initiator.psks = v[:init_psks].map { |psk| psk.htb }
+            responder.psks = v[:resp_psks].map { |psk| psk.htb }
+            # rubocop:enable Style/SymbolProc
           end
 
           initiator.prologue = v[:init_prologue].htb
@@ -102,7 +106,7 @@ RSpec.describe 'Vectors' do
                 begin
                   receiver.read_message(message[:ciphertext].htb)
                 rescue StandardError => e
-                  expect(e).to be_kind_of Noise::Exceptions::DecryptError
+                  expect(e).to be_a Noise::Exceptions::DecryptError
                 end
 
                 # Restart handshake

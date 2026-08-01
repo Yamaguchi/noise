@@ -5,7 +5,8 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'noise/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'noise-ruby'
+  spec.name = 'noise-ruby'
+  spec.required_ruby_version = '~> 3.0'
   spec.version       = Noise::VERSION
   spec.authors       = ['Hajime Yamaguchi']
   spec.email         = ['gen.yamaguchi0@gmail.com']
@@ -21,14 +22,23 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  spec.add_development_dependency 'blake3'
   spec.add_development_dependency 'bundler', '~> 2.0'
   spec.add_development_dependency 'rake', '>= 12.3.3'
   spec.add_development_dependency 'rspec', '~> 3.0'
+
+  spec.add_development_dependency 'rubocop'
+  spec.add_development_dependency 'rubocop-rspec'
+  spec.add_development_dependency 'simplecov'
+  spec.add_development_dependency 'simplecov-json'
+
+  # Optional backends. Each one is needed only when its function appears in a protocol name, and
+  # each also needs a system library that cannot be installed as a gem, so none of them is a runtime
+  # dependency. Add the one you need to your own Gemfile; see the README for the system libraries.
+  spec.add_development_dependency 'blake3'
+  spec.add_development_dependency 'ed448'
   spec.add_development_dependency 'secp256k1-ruby'
 
   spec.add_runtime_dependency 'ecdsa'
-  spec.add_runtime_dependency 'ed448'
   spec.add_runtime_dependency 'rbnacl'
   spec.add_runtime_dependency 'ruby-hmac'
 end

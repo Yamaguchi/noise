@@ -10,14 +10,17 @@ module Noise
       autoload :Blake3, 'noise/functions/hash/blake3'
 
       def self.hmac_hash(key, data, digest)
-        if digest.include?('SHA')
+        case digest
+        when /SHA/
           OpenSSL::HMAC.digest(OpenSSL::Digest.new(digest), key, data)
-        elsif digest.include?('BLAKE2b')
+        when /BLAKE2b/
           Noise::Functions::Hash::Blake2bHMAC.new(key).update(data).digest
-        elsif digest.include?('BLAKE2s')
+        when /BLAKE2s/
           Noise::Functions::Hash::Blake2sHMAC.new(key).update(data).digest
-        elsif digest.include?('BLAKE3')
+        when /BLAKE3/
           Noise::Functions::Hash::Blake3HMAC.new(key).update(data).digest
+        else
+          raise Noise::Exceptions::ProtocolNameError, "Unsupported hash function: #{digest}"
         end
       end
 
@@ -30,9 +33,10 @@ module Noise
       def self.hkdf(chaining_key, input_key_material, num_outputs, digest)
         temp_key = hmac_hash(chaining_key, input_key_material, digest)
         output1 = hmac_hash(temp_key, "\x01", digest)
-        output2 = hmac_hash(temp_key, output1 + "\x02", digest)
+        output2 = hmac_hash(temp_key, "#{output1}\u0002", digest)
         return [output1, output2] if num_outputs == 2
-        output3 = hmac_hash(temp_key, output2 + "\x03", digest)
+
+        output3 = hmac_hash(temp_key, "#{output2}\u0003", digest)
         [output1, output2, output3]
       end
     end

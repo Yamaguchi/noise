@@ -7,28 +7,29 @@ module Noise
         MAX_NONCE = 2**64 - 1
 
         def encrypt(k, n, ad, plaintext)
-          cipher = OpenSSL::Cipher::AES.new(256, :GCM).encrypt
+          cipher = OpenSSL::Cipher.new('aes-256-gcm').encrypt
           cipher.key = k
           cipher.iv = nonce_to_bytes(n)
           cipher.auth_data = ad
-          cipher.update(plaintext) + cipher.final + cipher.auth_tag
+          update(cipher, plaintext) + cipher.final + cipher.auth_tag
         rescue OpenSSL::Cipher::CipherError => e
           raise Noise::Exceptions::EncryptError, "Encrypt failed. #{e.message}", e.backtrace
         end
 
         def decrypt(k, n, ad, ciphertext)
-          cipher = OpenSSL::Cipher::AES.new(256, :GCM).decrypt
+          cipher = OpenSSL::Cipher.new('aes-256-gcm').decrypt
           cipher.key = k
           cipher.iv = nonce_to_bytes(n)
           cipher.auth_data = ad
-          cipher.auth_tag = ciphertext[-16..-1]
-          cipher.update(ciphertext[0...-16]) + cipher.final
+          cipher.auth_tag = ciphertext[-16..]
+          update(cipher, ciphertext[0...-16]) + cipher.final
         rescue OpenSSL::Cipher::CipherError => e
           raise Noise::Exceptions::DecryptError, "Decrpyt failed. #{e.message}", e.backtrace
         end
 
+        # 4 zero bytes followed by n as a big-endian 64 bit integer.
         def nonce_to_bytes(n)
-          "\x00" * 4 + format('%16x', n).htb
+          "\x00" * 4 + [n].pack('Q>')
         end
 
         # Returns a new 32-byte cipher key as a pseudorandom function of k.
@@ -39,6 +40,16 @@ module Noise
         # 32 bytes filled with zeros.
         def rekey(k)
           encrypt(k, MAX_NONCE, '', "\x00" * 32)[0...32]
+        end
+
+        private
+
+        # A zero-length payload is normal in a Noise message, but the openssl gem shipped with
+        # Ruby 3.0 raises ArgumentError('data must not be empty') instead of returning ''.
+        def update(cipher, data)
+          return String.new if data.empty?
+
+          cipher.update(data)
         end
       end
     end

@@ -6,27 +6,31 @@ module Noise
     attr_reader :name, :pattern
 
     CIPHER = {
-      'AESGCM': Noise::Functions::Cipher::AesGcm,
-      'ChaChaPoly': Noise::Functions::Cipher::ChaChaPoly
-    }.stringify_keys.freeze
+      'AESGCM' => Noise::Functions::Cipher::AesGcm,
+      'ChaChaPoly' => Noise::Functions::Cipher::ChaChaPoly
+    }.freeze
 
     DH = {
-      '25519': Noise::Functions::DH::ED25519,
-      '448': Noise::Functions::DH::ED448,
-      'secp256k1': Noise::Functions::DH::Secp256k1
-    }.stringify_keys.freeze
+      '25519' => Noise::Functions::DH::ED25519,
+      '448' => Noise::Functions::DH::ED448,
+      'secp256k1' => Noise::Functions::DH::Secp256k1
+    }.freeze
 
     HASH = {
-      'BLAKE2b': Noise::Functions::Hash::Blake2b,
-      'BLAKE2s': Noise::Functions::Hash::Blake2s,
-      'SHA256': Noise::Functions::Hash::Sha256,
-      'SHA512': Noise::Functions::Hash::Sha512,
-      'BLAKE3': Noise::Functions::Hash::Blake3
-    }.stringify_keys.freeze
+      'BLAKE2b' => Noise::Functions::Hash::Blake2b,
+      'BLAKE2s' => Noise::Functions::Hash::Blake2s,
+      'SHA256' => Noise::Functions::Hash::Sha256,
+      'SHA512' => Noise::Functions::Hash::Sha512,
+      'BLAKE3' => Noise::Functions::Hash::Blake3
+    }.freeze
 
     def self.create(name)
-      prefix, pattern_name, dh_name, cipher_name, hash_name = name.split('_')
-      raise Noise::Exceptions::ProtocolNameError if prefix != 'Noise'
+      parts = name.split('_')
+      raise Noise::Exceptions::ProtocolNameError, "Malformed protocol name: #{name}" unless parts.size == 5
+
+      prefix, pattern_name, dh_name, cipher_name, hash_name = parts
+      raise Noise::Exceptions::ProtocolNameError, "Malformed protocol name: #{name}" if prefix != 'Noise'
+
       new(name, pattern_name, cipher_name, hash_name, dh_name)
     end
 
@@ -43,7 +47,8 @@ module Noise
       @cipher_fn = CIPHER[cipher_name]&.new
       @hash_fn = HASH[hash_name]&.new
       @dh_fn = DH[dh_name]&.new
-      raise Noise::Exceptions::ProtocolNameError unless @cipher_fn && @hash_fn && @dh_fn
+      raise Noise::Exceptions::ProtocolNameError, "Unsupported function in: #{@name}" unless
+        @cipher_fn && @hash_fn && @dh_fn
     end
 
     def psk?

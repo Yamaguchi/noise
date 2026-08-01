@@ -4,6 +4,7 @@ module Noise
   module Exceptions
     class DecryptError < StandardError
       def initialize(cause)
+        super
         @cause = cause
       end
     end

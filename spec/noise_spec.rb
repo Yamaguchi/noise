@@ -4,6 +4,6 @@ require 'spec_helper'
 
 RSpec.describe Noise do
   it 'has a version number' do
-    expect(Noise::VERSION).not_to be nil
+    expect(Noise::VERSION).not_to be_nil
   end
 end

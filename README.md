@@ -59,6 +59,12 @@ After installing, define an environment variable as follows:
 
          $ export LIBGOLDILOCKS=/usr/local/lib/libgoldilocks.so
 
+and, add this line to your Gemfile:
+
+```
+gem 'ed448'
+```
+
 If you use Secp256k1, you must install [libsecp256k1](https://github.com/bitcoin-core/secp256k1).
 
     $ git clone https://github.com/bitcoin-core/secp256k1
@@ -130,6 +136,31 @@ cipher = initiator.encrypt("Hello, World!") # => "\xDA\xC7\xD7as\v\xFA\xCC,\xB3\
 
 ```
 plain = responder.decrypt(cipher) # => "Hello, World!"
+```
+
+#### Out-of-order transport messages
+
+Each party counts the transport messages of each direction with a nonce. If the transport layer can
+deliver messages out of order or lose them, it has to carry the nonce of each message, and the
+receiver sets the nonce before decrypting. Restore the previous value if the message fails to
+authenticate, so that the following messages are still decryptable.
+
+```
+initiator.encryption_nonce # => 0
+responder.decryption_nonce = 2 # decrypt the message numbered 2 next
+plain = responder.decrypt(cipher)
+```
+
+#### Rekey
+
+Rekeying replaces the key of one direction with `REKEY(k)`, so that a key compromised later cannot
+decrypt the messages that came before it. The nonce keeps counting. Both parties must rekey the
+matching direction at the same point of the message stream; when that happens is up to the
+application protocol.
+
+```
+initiator.rekey_encryption
+responder.rekey_decryption
 ```
 
 ## Development
