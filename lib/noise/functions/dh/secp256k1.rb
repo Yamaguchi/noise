@@ -51,7 +51,7 @@ module Noise
         def dh(private_key, public_key)
           raise Noise::Exceptions::InvalidPublicKeyError, public_key unless public_key.bytesize == DHLEN
 
-          scalar = private_key_scalar(private_key)
+          scalar = OpenSSL::BN.new(self.class.decode_private_key(private_key))
           shared = parse_public_key(public_key).mul(scalar)
           # A backstop rather than a reachable case: secp256k1 has cofactor 1, so a point that
           # parsed has order n, and the scalar is already known to be in [1, n-1]. It stays because
@@ -67,10 +67,31 @@ module Noise
         end
 
         def self.from_private(private_key)
-          group = ECDSA::Group::Secp256k1
-          scalar = ECDSA::Format::IntegerOctetString.decode(private_key)
-          point = group.generator.multiply_by_scalar(scalar)
+          scalar = decode_private_key(private_key)
+          point = ECDSA::Group::Secp256k1.generator.multiply_by_scalar(scalar)
           Noise::Key.new(private_key, ECDSA::Format::PointOctetString.encode(point, compression: true))
+        end
+
+        # Decodes a private key into the scalar it denotes, rejecting the values that cannot serve
+        # as one. Both entry points that take a private key go through this, so a key from_private
+        # accepts is one dh can use.
+        #
+        # Rejected are a length other than PRIVATE_KEY_LEN, zero, and anything at or above the
+        # group order: those scalars multiply every point to infinity, whose compressed encoding is
+        # the single byte 0x00. Without the check from_private would hand back a Noise::Key holding
+        # that one byte as its public key, and the handshake it is used in would fail only once the
+        # key reached the wire. A private key belongs to the caller rather than to the peer, so a
+        # bad one raises ArgumentError and not InvalidPublicKeyError.
+        def self.decode_private_key(private_key)
+          unless private_key.bytesize == PRIVATE_KEY_LEN
+            raise ArgumentError, "private key must be #{PRIVATE_KEY_LEN} bytes"
+          end
+
+          scalar = ECDSA::Format::IntegerOctetString.decode(private_key)
+          order = ECDSA::Group::Secp256k1.order
+          raise ArgumentError, 'private key is out of range' unless scalar.between?(1, order - 1)
+
+          scalar
         end
 
         private
@@ -87,22 +108,6 @@ module Noise
           OpenSSL::PKey::EC::Point.new(@group, public_key)
         rescue OpenSSL::PKey::EC::Point::Error
           raise Noise::Exceptions::InvalidPublicKeyError, public_key
-        end
-
-        # Decodes a private key into a scalar the curve accepts.
-        #
-        # A scalar of zero, or one that is a multiple of the group order, multiplies every point to
-        # infinity. Rejecting it here keeps that case from being reported as the peer's invalid
-        # public key.
-        def private_key_scalar(private_key)
-          unless private_key.bytesize == PRIVATE_KEY_LEN
-            raise ArgumentError, "private key must be #{PRIVATE_KEY_LEN} bytes"
-          end
-
-          scalar = OpenSSL::BN.new(private_key, 2)
-          raise ArgumentError, 'private key is out of range' if scalar <= 0 || scalar >= @group.order
-
-          scalar
         end
       end
     end
