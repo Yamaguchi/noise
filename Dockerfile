@@ -1,8 +1,7 @@
-# check=skip=FromPlatformFlagConstDisallowed
-# The test suite loads the x86_64 libsecp256k1 bundled in spec/lib, and spec/spec_helper.rb
-# points at it unconditionally, so this image has to be linux/amd64 even on an arm64 host.
-# It mirrors the CI runner (ubuntu x86_64).
-FROM --platform=linux/amd64 ruby:3.3
+# A Linux environment close to the CI runner, for checking a change against the Ruby version CI
+# lints with. Nothing in the suite is architecture specific, so the image builds for the host
+# architecture and needs no emulation.
+FROM ruby:3.3
 
 # libsodium: dlopen'd by rbnacl, which lib/noise.rb requires unconditionally.
 # cargo: the blake3 gem is a Rust extension and is built at install time.
