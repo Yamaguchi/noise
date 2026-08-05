@@ -47,21 +47,6 @@ Or install it yourself as:
 
     $ gem install noise-ruby
 
-If you use Secp256k1, you must install [libsecp256k1](https://github.com/bitcoin-core/secp256k1).
-
-    $ git clone https://github.com/bitcoin-core/secp256k1
-    $ cd secp256k1
-    $ ./autogen.sh
-    $ ./configure --enable-module-recovery --enable-experimental --enable-module-ecdh
-    $ make
-    $ sudo make install
-
-and, add this line to your Gemfile:
-
-```
-gem 'secp256k1-ruby'
-```
-
 If you use BLAKE3, you must install [Rust and Cargo](https://www.rust-lang.org/tools/install).
 And add this line to your Gemfile:
 
