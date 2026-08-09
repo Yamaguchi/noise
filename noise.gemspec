@@ -6,7 +6,7 @@ require 'noise/version'
 
 Gem::Specification.new do |spec|
   spec.name = 'noise-ruby'
-  spec.required_ruby_version = '~> 3.0'
+  spec.required_ruby_version = '>= 3.2'
   spec.version       = Noise::VERSION
   spec.authors       = ['Hajime Yamaguchi']
   spec.email         = ['gen.yamaguchi0@gmail.com']
@@ -22,7 +22,6 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  spec.add_development_dependency 'bundler', '~> 2.0'
   spec.add_development_dependency 'rake', '>= 12.3.3'
   spec.add_development_dependency 'rspec', '~> 3.0'
 
