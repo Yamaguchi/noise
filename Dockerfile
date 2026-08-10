@@ -1,7 +1,7 @@
 # A Linux environment close to the CI runner, for checking a change against the Ruby version CI
 # lints with. Nothing in the suite is architecture specific, so the image builds for the host
 # architecture and needs no emulation.
-FROM ruby:3.3
+FROM ruby:4.0
 
 # libsodium: dlopen'd by rbnacl, which lib/noise.rb requires unconditionally.
 # cargo: the blake3 gem is a Rust extension and is built at install time.

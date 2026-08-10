@@ -6,7 +6,7 @@ require 'noise/version'
 
 Gem::Specification.new do |spec|
   spec.name = 'noise-ruby'
-  spec.required_ruby_version = '~> 3.0'
+  spec.required_ruby_version = '>= 3.2'
   spec.version       = Noise::VERSION
   spec.authors       = ['Hajime Yamaguchi']
   spec.email         = ['gen.yamaguchi0@gmail.com']
@@ -22,7 +22,6 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  spec.add_development_dependency 'bundler', '~> 2.0'
   spec.add_development_dependency 'rake', '>= 12.3.3'
   spec.add_development_dependency 'rspec', '~> 3.0'
 
@@ -38,8 +37,9 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency 'ecdsa'
   # The 448 DH function needs the raw key API (OpenSSL::PKey.new_raw_private_key and friends),
-  # which arrived in openssl 3.0. Ruby 3.0 still ships 2.2 as its default gem, so the version has
-  # to be requested explicitly rather than left to whatever the interpreter bundles.
+  # which arrived in openssl 3.0. Every supported interpreter bundles a newer default gem, but the
+  # floor is stated so an older openssl pinned in an application's Gemfile fails to resolve rather
+  # than failing at runtime.
   spec.add_runtime_dependency 'openssl', '>= 3.0'
   spec.add_runtime_dependency 'rbnacl'
   spec.add_runtime_dependency 'ruby-hmac'
