@@ -33,10 +33,13 @@ module Noise
     # not justify a runtime dependency on it.
     def require_optional(name)
       require name
-      yield if block_given?
     rescue LoadError => e
       @unavailable_dependencies[name] = e.message
       warn("Optional dependency '#{name}' is unavailable: #{e.message}")
+    else
+      # The block runs outside the rescue on purpose: a LoadError raised by the block itself is
+      # about something other than this dependency, and swallowing it here would hide the cause.
+      yield if block_given?
     end
 
     # Raises MissingDependencyError if the named optional backend failed to load earlier. Call it

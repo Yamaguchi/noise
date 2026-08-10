@@ -30,6 +30,9 @@ Supported Features:
 
 ## Installation
 
+This gem requires Ruby 3.2 or later, and is tested on 3.2, 3.3, 3.4 and 4.0. Ruby 3.0 and 3.1 are
+past end of life and are no longer supported; stay on noise-ruby 0.12.0 or earlier if you need them.
+
 This gem needs libsodium library.
 To install libsodium, see https://github.com/jedisct1/libsodium
 

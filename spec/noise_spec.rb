@@ -35,6 +35,12 @@ RSpec.describe Noise do
         expect { described_class.require_optional('noise/no_such_backend', &b) }.to output.to_stderr
       end.not_to yield_control
     end
+
+    it 'lets a LoadError raised by the block through instead of blaming the dependency' do
+      expect { described_class.require_optional('securerandom') { require 'noise/no_such_file' } }
+        .to raise_error(LoadError, %r{noise/no_such_file})
+      expect { described_class.optional_dependency!('securerandom') }.not_to raise_error
+    end
   end
 
   describe '.optional_dependency!' do
