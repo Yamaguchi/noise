@@ -107,6 +107,12 @@ module Noise
         pattern.each do |token|
           case token
           when Noise::Token::E
+            # A fresh keypair per handshake is what the pattern's forward secrecy rests on. Two
+            # things preset @e. Connection::Base#fallback carries the ephemeral of the aborted
+            # handshake into the new state, which the fallback patterns require: process_fallback
+            # mixes its public key as a pre-message. A caller passing keypairs[:e] to
+            # Connection::Base#initialize also presets it, and that is supported for reproducing
+            # the official test vectors and nothing else.
             @e ||= @protocol.dh_fn.generate_keypair
             message_buffer << @e.public_key
             mix_e(@e.public_key)

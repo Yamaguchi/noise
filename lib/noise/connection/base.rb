@@ -13,6 +13,16 @@ module Noise
                   :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake, :s, :rs
       attr_accessor :psks, :prologue
 
+      # @param [String] name the protocol name, for example 'Noise_XX_25519_ChaChaPoly_SHA256'.
+      # @param [Hash] keypairs the keys the pattern needs, as private or public key strings.
+      #   :s is the local static private key, :rs and :re the remote static and ephemeral public keys.
+      #
+      #   :e sets the local ephemeral private key. It exists only so that spec/vectors_spec.rb can
+      #   reproduce the official test vectors, which fix both sides' ephemeral keys to make the
+      #   output deterministic. Never set it outside that use: HandshakeState#write_message reuses
+      #   the keypair given here instead of generating a fresh one, and an ephemeral key reused
+      #   across handshakes gives up the forward secrecy every pattern depends on. The handshake
+      #   still succeeds, so nothing reports the loss.
       def initialize(name, keypairs: { s: nil, e: nil, rs: nil, re: nil })
         @protocol = Protocol.create(name)
 

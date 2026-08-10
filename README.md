@@ -75,6 +75,25 @@ Followings shows handshake protocol with "Noise_NN_25519_ChaChaPoly_BLAKE2b"
 
 ### Handshake
 
+#### Supplying keys
+
+Patterns other than `NN` need keys before the handshake starts. `Connection::Initiator.new` and
+`Connection::Responder.new` take them in the `keypairs:` hash: `:s` is the local static private key,
+`:rs` and `:re` are the remote party's static and ephemeral public keys.
+
+```
+initiator = Noise::Connection::Initiator.new("Noise_XX_25519_ChaChaPoly_SHA256", keypairs: { s: static_private_key })
+```
+
+`keypairs:` also accepts `:e`, the local ephemeral private key. **It exists only so that
+`spec/vectors_spec.rb` can reproduce the official test vectors, which fix both sides' ephemeral keys
+to make the output deterministic. Never set it in production.** A connection created with `:e` reuses
+that ephemeral keypair instead of generating a fresh one per handshake, which destroys the forward
+secrecy every pattern depends on: an attacker who recovers the key can decrypt every session that
+used it, past and future. Nothing fails and no warning is printed - the handshake still succeeds and
+your own tests still pass - so the loss is invisible. Leave `:e` unset and let the library generate
+it.
+
 #### initiator
 
 ```
