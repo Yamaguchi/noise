@@ -64,8 +64,10 @@ module Noise
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :write
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
 
-        if @handshake_state.expected_message_length(payload.bytesize) > MAX_MESSAGE_LENGTH
-          raise Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.'
+        length = @handshake_state.expected_message_length(payload.bytesize)
+        if length > MAX_MESSAGE_LENGTH
+          raise Noise::Exceptions::MessageTooLongError,
+                "Message would be #{length} bytes, which exceeds the maximum of #{MAX_MESSAGE_LENGTH}."
         end
 
         @next_message = :read
@@ -79,8 +81,11 @@ module Noise
         raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
         raise Noise::Exceptions::NoiseHandshakeError if @next_message != :read
         raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
-        raise Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.' if
-          data.bytesize > MAX_MESSAGE_LENGTH
+
+        if data.bytesize > MAX_MESSAGE_LENGTH
+          raise Noise::Exceptions::MessageTooLongError,
+                "Message is #{data.bytesize} bytes, which exceeds the maximum of #{MAX_MESSAGE_LENGTH}."
+        end
 
         @next_message = :write
         buffer = +''

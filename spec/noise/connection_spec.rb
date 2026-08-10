@@ -120,15 +120,22 @@ RSpec.describe Noise::Connection do
     context 'when the handshake message is longer than the maximum length' do
       it {
         expect { responder.read_message('a' * (described_class::Base::MAX_MESSAGE_LENGTH + 1)) }
-          .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.')
+          .to raise_error(Noise::Exceptions::MessageTooLongError, /65536 bytes.*maximum of 65535/)
       }
     end
 
     context 'when the payload would make the message longer than the maximum length' do
       it {
         expect { initiator.write_message('a' * described_class::Base::MAX_MESSAGE_LENGTH) }
-          .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'Message exceeds the maximum length.')
+          .to raise_error(Noise::Exceptions::MessageTooLongError, /65567 bytes.*maximum of 65535/)
       }
+
+      it 'leaves the connection able to write the message it rejected the payload of' do
+        expect { initiator.write_message('a' * described_class::Base::MAX_MESSAGE_LENGTH) }
+          .to raise_error(Noise::Exceptions::MessageTooLongError)
+
+        expect(responder.read_message(initiator.write_message(''))).to eq ''
+      end
     end
 
     context 'when the transport message is shorter than the authentication tag' do
