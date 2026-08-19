@@ -69,8 +69,8 @@ RSpec.describe Noise::Functions::DH::ED25519 do
     end
   end
 
-  # The public key length is validated by #dh itself, so an error about the private key
-  # still comes straight from RbNaCl instead of being reported as a public key problem.
+  # The public key length is validated by #dh itself, so an error about the private key still
+  # comes straight from OpenSSL instead of being reported as a public key problem.
   describe '#dh with an invalid private key' do
     let(:private_key) { ('01' * 31).htb }
     let(:public_key) do
@@ -78,7 +78,9 @@ RSpec.describe Noise::Functions::DH::ED25519 do
     end
     let(:ed25519) { described_class.new }
 
-    it { expect { ed25519.dh(private_key, public_key) }.to raise_error RbNaCl::LengthError }
+    it 'does not translate the error into InvalidPublicKeyError' do
+      expect { ed25519.dh(private_key, public_key) }.to raise_error OpenSSL::PKey::PKeyError
+    end
   end
 
   describe '#generate_keypair' do

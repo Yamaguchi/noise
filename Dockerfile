@@ -3,11 +3,10 @@
 # architecture and needs no emulation.
 FROM ruby:4.0
 
-# libsodium: dlopen'd by rbnacl, which lib/noise.rb requires unconditionally.
 # cargo: the blake3 gem is a Rust extension and is built at install time.
 # git: noise.gemspec calls `git ls-files` while the gemspec is evaluated.
 RUN apt-get update -qq \
- && apt-get install -y --no-install-recommends build-essential git libsodium23 cargo \
+ && apt-get install -y --no-install-recommends build-essential git cargo \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /work

@@ -7,7 +7,7 @@ module Noise
         HASHLEN = 32
         BLOCKLEN = 64
         def hash(data)
-          RbNaCl::Hash.sha256(data)
+          OpenSSL::Digest.digest('SHA256', data)
         end
 
         def hashlen

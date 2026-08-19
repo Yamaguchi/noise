@@ -36,11 +36,10 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'blake3'
 
   spec.add_runtime_dependency 'ecdsa'
-  # The 448 DH function needs the raw key API (OpenSSL::PKey.new_raw_private_key and friends),
-  # which arrived in openssl 3.0. Every supported interpreter bundles a newer default gem, but the
-  # floor is stated so an older openssl pinned in an application's Gemfile fails to resolve rather
-  # than failing at runtime.
+  # The 25519 and 448 DH functions need the raw key API (OpenSSL::PKey.new_raw_private_key and
+  # friends), which arrived in openssl 3.0. Every supported interpreter bundles a newer default
+  # gem, but the floor is stated so an older openssl pinned in an application's Gemfile fails to
+  # resolve rather than failing at runtime.
   spec.add_runtime_dependency 'openssl', '>= 3.0'
-  spec.add_runtime_dependency 'rbnacl'
   spec.add_runtime_dependency 'ruby-hmac'
 end
