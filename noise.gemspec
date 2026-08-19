@@ -30,10 +30,9 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'simplecov'
   spec.add_development_dependency 'simplecov-json'
 
-  # Optional backend. BLAKE3 is needed only when it appears in a protocol name, and it needs Rust
-  # to build, so it is not a runtime dependency. Add it to your own Gemfile if you need it; see the
-  # README.
-  spec.add_development_dependency 'blake3'
+  # Optional backend. BLAKE3 is needed only when it appears in a protocol name, so it is not a
+  # runtime dependency. Add it to your own Gemfile if you need it; see the README.
+  spec.add_development_dependency 'blake3-rb'
 
   spec.add_runtime_dependency 'ecdsa'
   # The 25519 and 448 DH functions need the raw key API (OpenSSL::PKey.new_raw_private_key and

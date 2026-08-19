@@ -33,13 +33,14 @@ Supported Features:
 This gem requires Ruby 3.2 or later, and is tested on 3.2, 3.3, 3.4 and 4.0. Ruby 3.0 and 3.1 are
 past end of life and are no longer supported; stay on noise-ruby 0.12.0 or earlier if you need them.
 
-Every function is computed either by the OpenSSL that Ruby is linked against or in pure Ruby, so
-no system library has to be installed separately. OpenSSL 1.1.1 or later provides everything this
-gem asks of it, and that is what the official Ruby packages and the usual version managers (rbenv,
-rvm, asdf) are built with. Two kinds of build fall short: a Ruby linked against LibreSSL has no
-BLAKE2b, no ChaCha20-Poly1305 and no X448, and an OpenSSL restricted to the FIPS provider has
-neither BLAKE2b nor ChaCha20-Poly1305 nor the secp256k1 curve. On such a build the protocol names
-that use a missing function raise an error, and the remaining ones keep working.
+Every function except BLAKE3, which is optional and covered below, is computed either by the
+OpenSSL that Ruby is linked against or in pure Ruby, so no system library has to be installed
+separately. OpenSSL 1.1.1 or later provides everything this gem asks of it, and that is what the
+official Ruby packages and the usual version managers (rbenv, rvm, asdf) are built with. Two kinds
+of build fall short: a Ruby linked against LibreSSL has no BLAKE2b, no ChaCha20-Poly1305 and no
+X448, and an OpenSSL restricted to the FIPS provider has neither BLAKE2b nor ChaCha20-Poly1305 nor
+the secp256k1 curve. On such a build the protocol names that use a missing function raise an error,
+and the remaining ones keep working.
 
 Add this line to your application's Gemfile:
 
@@ -55,12 +56,15 @@ Or install it yourself as:
 
     $ gem install noise-ruby
 
-If you use BLAKE3, you must install [Rust and Cargo](https://www.rust-lang.org/tools/install).
-And add this line to your Gemfile:
+If you use BLAKE3, add this line to your Gemfile:
 
 ```
-gem 'blake3'
+gem 'blake3-rb'
 ```
+
+`blake3-rb` ships precompiled binaries for common Linux, macOS and Windows platforms (x86_64 and
+aarch64), so no Rust or C toolchain is needed to install it there. On any other platform bundler
+falls back to the source gem, which does need a C compiler.
 
 ## Usage
 

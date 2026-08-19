@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-Noise.require_optional 'blake3'
+Noise.require_optional 'blake3-rb'
 
 module Noise
   module Functions
@@ -10,11 +10,11 @@ module Noise
         BLOCKLEN = 64
 
         def initialize
-          Noise.optional_dependency!('blake3')
+          Noise.optional_dependency!('blake3-rb')
         end
 
         def hash(data)
-          ::Blake3.digest(data)
+          ::Digest::Blake3.digest(data)
         end
 
         def hashlen
@@ -28,7 +28,7 @@ module Noise
 
       class Blake3HMAC < HMAC::Base
         def initialize(key = nil)
-          super(::Blake3::Hasher, Blake3::BLOCKLEN, Blake3::HASHLEN, key)
+          super(::Digest::Blake3, Blake3::BLOCKLEN, Blake3::HASHLEN, key)
         end
         public_class_method :new, :digest, :hexdigest
       end
