@@ -4,7 +4,6 @@ require 'noise/version'
 
 require 'ecdsa'
 require 'openssl'
-require 'rbnacl'
 require 'ruby_hmac'
 require 'securerandom'
 

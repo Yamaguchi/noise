@@ -66,4 +66,22 @@ RSpec.describe Noise::Functions::Cipher::ChaChaPoly do
     it { expect(subject.bytesize).to eq 16 }
     it { expect(cipher.decrypt(k, n, ad, subject)).to eq '' }
   end
+
+  # A ciphertext that fails the Poly1305 check must be reported as the library's own DecryptError,
+  # not as the OpenSSL error underneath it.
+  describe 'tampered ciphertext' do
+    subject { cipher.decrypt(k, n, ad, tampered) }
+
+    let(:cipher) { described_class.new }
+    let(:ad) { '955030590f203ad8e879746b277d16f8009661b332620edf641f7fe4c05a4f76'.htb }
+    let(:k) { '36b4b54fdef654f67adface4d65b1be19880031bdad72dff5909b9e63a4dcb68'.htb }
+    let(:n) { 1 }
+    let(:tampered) do
+      ciphertext = cipher.encrypt(k, n, ad, 'hello')
+      ciphertext[0] = (ciphertext[0].ord ^ 0x01).chr
+      ciphertext
+    end
+
+    it { expect { subject }.to raise_error Noise::Exceptions::DecryptError }
+  end
 end

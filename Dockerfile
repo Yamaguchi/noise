@@ -3,11 +3,11 @@
 # architecture and needs no emulation.
 FROM ruby:4.0
 
-# libsodium: dlopen'd by rbnacl, which lib/noise.rb requires unconditionally.
 # git: noise.gemspec calls `git ls-files` while the gemspec is evaluated.
 # No Rust toolchain: the blake3-rb gem ships a precompiled binary for this platform.
+# No libsodium: every function is computed by OpenSSL or in pure Ruby.
 RUN apt-get update -qq \
- && apt-get install -y --no-install-recommends build-essential git libsodium23 \
+ && apt-get install -y --no-install-recommends build-essential git \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /work
