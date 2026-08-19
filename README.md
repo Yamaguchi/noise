@@ -56,8 +56,9 @@ If you use BLAKE3, add this line to your Gemfile:
 gem 'blake3-rb'
 ```
 
-`blake3-rb` ships precompiled binaries for Linux, macOS and Windows, so no Rust or C toolchain is
-needed to install it.
+`blake3-rb` ships precompiled binaries for common Linux, macOS and Windows platforms (x86_64 and
+aarch64), so no Rust or C toolchain is needed to install it there. On any other platform bundler
+falls back to the source gem, which does need a C compiler.
 
 ## Usage
 

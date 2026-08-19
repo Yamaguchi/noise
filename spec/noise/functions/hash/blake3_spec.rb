@@ -22,7 +22,7 @@ RSpec.describe Noise::Functions::Hash::Blake3 do
 
     # https://github.com/BLAKE3-team/BLAKE3/blob/master/test_vectors/test_vectors.json
     describe 'test vector' do
-      path = 'spec/vectors/blake3-kat.txt'
+      path = "#{File.dirname(__FILE__)}/../../../vectors/blake3-kat.txt"
       vectors = JSON.parse(File.read(path), symbolize_names: true)
       vectors.each do |json|
         describe "input of #{json[:input_len]} bytes" do
