@@ -206,6 +206,47 @@ application protocol that has to guarantee the turn taking.
 Use it only when the protocol you are implementing calls for it. It is off by default, and a
 one-way pattern refuses it, because such a pattern has no messages to alternate.
 
+### Lightning Network (BOLT #8)
+
+BOLT #8 is the transport the Lightning Network runs on: a `Noise_XK_secp256k1_ChaChaPoly_SHA256`
+handshake, then a byte stream in which every message is preceded by its own encrypted length.
+`Noise::Lightning::Transport` owns that framing, so an application only has to run the handshake
+and hand over the finished connection.
+
+```
+name = Noise::Lightning::Transport::PROTOCOL_NAME
+
+initiator = Noise::Connection::Initiator.new(name, keypairs: { s: local_static, rs: node_id })
+initiator.prologue = Noise::Lightning::Transport::PROLOGUE
+initiator.start_handshake
+# ... exchange the three handshake messages over the socket ...
+
+transport = Noise::Lightning::Transport.new(initiator)
+socket.write(transport.write("a lightning message"))
+message = transport.read(socket)
+```
+
+`#write` returns the bytes to send: the payload length as a two-byte big-endian integer encrypted
+on its own, then the encrypted payload. `#read` takes anything that answers `read(length)`, reads
+the length, and then reads and decrypts that many bytes. It raises `TruncatedMessageError` if the
+stream ends part way through a message, and `DecryptError` if either half fails to authenticate —
+BOLT #8 requires the connection to be closed when that happens.
+
+Each direction replaces its key with `HKDF(ck, k)` once its nonce reaches 1000, which is every 500
+messages because each message is encrypted twice. This is not the `rekey_encryption` of the Noise
+specification: it draws on the chaining key the handshake ended with, so a key stolen now says
+nothing about the keys that direction used before it. The transport does it on its own; nothing
+has to be called.
+
+The transport takes over the connection's transport phase: it holds the very `CipherState`s the
+connection does. Once a connection is wrapped, stop calling its `encrypt`, `decrypt`, nonce
+accessors and rekey methods, because each of them moves the same key and nonce and the peer has no
+way to learn that they did. A half-duplex connection is refused outright, since BOLT #8 gives each
+direction a key of its own.
+
+Nothing else in the gem loads this. An application that does not speak Lightning never names
+`Noise::Lightning`, and never pays for it.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.

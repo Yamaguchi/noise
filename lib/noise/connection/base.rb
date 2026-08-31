@@ -58,6 +58,12 @@ module Noise
       #   :transport.
       attr_reader :state
 
+      # @return [String, nil] the chaining key the handshake ended with, once it has. Split()
+      #   derives the transport keys from it and leaves it as it is, so a transport layer that
+      #   derives its own keys from it later — BOLT #8 rotates its keys this way — needs it after
+      #   the handshake. It is as secret as the transport keys it produced.
+      attr_reader :chaining_key
+
       attr_reader :protocol, :handshake_hash, :handshake_state,
                   :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake, :s, :rs
       attr_accessor :psks, :prologue
@@ -294,6 +300,7 @@ module Noise
 
       def handshake_done(_c1, _c2)
         @handshake_hash = @symmetric_state.handshake_hash
+        @chaining_key = @symmetric_state.ck
         @s = @handshake_state.s
         @rs = @handshake_state.rs
         @handshake_state = nil
