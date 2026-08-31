@@ -14,6 +14,27 @@ module Noise
     # :handshake_write for the initiator and :handshake_read for the responder. Writing or reading
     # a handshake message passes the turn to the other party, and the message that completes the
     # pattern moves the connection to :transport.
+    #
+    # == Threads
+    #
+    # One connection belongs to one thread. Nothing here is synchronised: the state above is a
+    # plain instance variable, and #encrypt and #decrypt advance the transport nonce with a plain
+    # +=, so two threads that share a connection can encrypt two different plaintexts under the
+    # same nonce. Neither ChaChaPoly nor AESGCM degrades gracefully when that happens: reusing a
+    # nonce breaks the confidentiality of both messages and lets an attacker forge further ones.
+    #
+    # A caller that has to reach one connection from more than one thread is responsible for
+    # serialising every call to it.
+    #
+    # This class deliberately does not lock. A Mutex would make each call atomic without making
+    # concurrent use correct: the transport nonce numbers the messages of a direction, so two
+    # threads that both encrypt still hand the transport layer a stream whose order the receiver
+    # cannot reconstruct. Only the application knows which message is meant to be first, and once
+    # it has said so, its own serialisation has already done what the lock would have done.
+    #
+    # The other direction is no better. Decrypting a message that arrived out of order is a
+    # #decryption_nonce= call followed by a #decrypt call, a sequence no per-call lock can hold
+    # together.
     class Base
       # The Noise spec caps a handshake or transport message at 65535 bytes. A transport message is
       # the ciphertext, so the plaintext a caller may hand to encrypt is shorter by the
