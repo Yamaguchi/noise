@@ -3,8 +3,11 @@
 module Noise
   module Connection
     class Responder < Base
-      def initialize_next_message
-        @next_message = :read
+      # The responder reads the first handshake message of the pattern.
+      #
+      # @return [Symbol] the state start_handshake moves this party into.
+      def initial_turn
+        :handshake_read
       end
 
       def initiator?

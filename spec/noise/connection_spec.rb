@@ -290,4 +290,159 @@ RSpec.describe Noise::Connection do
         .to raise_error(Noise::Exceptions::NoiseHandshakeError, 'This party cannot encrypt messages.')
     end
   end
+
+  describe 'connection state' do
+    let(:name) { 'Noise_NN_25519_AESGCM_SHA256' }
+    let(:initiator) { Noise::Connection::Initiator.new(name) }
+    let(:responder) { Noise::Connection::Responder.new(name) }
+
+    describe 'transitions' do
+      it 'starts in :created, with neither flag set' do
+        expect(initiator.state).to eq :created
+        expect(initiator.handshake_started?).to be false
+        expect(initiator.handshake_finished?).to be false
+      end
+
+      it 'moves each party into the state its role starts the pattern in' do
+        initiator.start_handshake
+        responder.start_handshake
+
+        expect(initiator.state).to eq :handshake_write
+        expect(responder.state).to eq :handshake_read
+        expect(initiator.handshake_started?).to be true
+        expect(initiator.handshake_finished?).to be false
+      end
+
+      it 'passes the turn on every handshake message, and ends in :transport' do
+        initiator.start_handshake
+        responder.start_handshake
+
+        first = initiator.write_message('')
+        expect(initiator.state).to eq :handshake_read
+        responder.read_message(first)
+        expect(responder.state).to eq :handshake_write
+
+        initiator.read_message(responder.write_message(''))
+        expect(initiator.state).to eq :transport
+        expect(responder.state).to eq :transport
+        expect(initiator.handshake_finished?).to be true
+      end
+
+      it 'keeps handshake_started and handshake_finished as aliases of the predicates' do
+        initiator.start_handshake
+
+        expect(initiator.handshake_started).to be true
+        expect(initiator.handshake_finished).to be false
+      end
+    end
+
+    describe 'operations called in the wrong state' do
+      it 'reports a handshake that has not started' do
+        expect { initiator.write_message('') }
+          .to raise_error(Noise::Exceptions::HandshakeNotStartedError, /has not started/)
+        expect { initiator.read_message('') }
+          .to raise_error(Noise::Exceptions::HandshakeNotStartedError, /has not started/)
+        expect { initiator.fallback('Noise_XXfallback_25519_AESGCM_SHA256') }
+          .to raise_error(Noise::Exceptions::HandshakeNotStartedError, /has not started/)
+      end
+
+      it 'reports whose turn it is' do
+        initiator.start_handshake
+        responder.start_handshake
+
+        expect { initiator.read_message('') }
+          .to raise_error(Noise::Exceptions::HandshakeTurnError, /writes the next handshake message/)
+        expect { responder.write_message('') }
+          .to raise_error(Noise::Exceptions::HandshakeTurnError, /reads the next handshake message/)
+      end
+
+      it 'reports a handshake that has not finished when a transport operation is called' do
+        initiator.start_handshake
+
+        expect { initiator.encrypt('') }
+          .to raise_error(Noise::Exceptions::HandshakeNotFinishedError, 'The handshake has not finished.')
+        expect { initiator.rekey_encryption }
+          .to raise_error(Noise::Exceptions::HandshakeNotFinishedError, 'The handshake has not finished.')
+      end
+
+      it 'rejects a second start_handshake' do
+        initiator.start_handshake
+
+        expect { initiator.start_handshake }
+          .to raise_error(Noise::Exceptions::HandshakeTurnError, /writes the next handshake message/)
+      end
+
+      it 'reports a handshake that is already over' do
+        initiator.start_handshake
+        responder.start_handshake
+        responder.read_message(initiator.write_message(''))
+        initiator.read_message(responder.write_message(''))
+
+        expect { initiator.start_handshake }
+          .to raise_error(Noise::Exceptions::HandshakeAlreadyFinishedError, 'The handshake has already finished.')
+        expect { initiator.write_message('') }
+          .to raise_error(Noise::Exceptions::HandshakeAlreadyFinishedError, 'The handshake has already finished.')
+        expect { initiator.read_message('') }
+          .to raise_error(Noise::Exceptions::HandshakeAlreadyFinishedError, 'The handshake has already finished.')
+        expect { initiator.fallback('Noise_XXfallback_25519_AESGCM_SHA256') }
+          .to raise_error(Noise::Exceptions::HandshakeAlreadyFinishedError, 'The handshake has already finished.')
+      end
+
+      # A caller that does not need to tell the four apart can rescue the one parent class.
+      it 'raises subclasses of NoiseHandshakeError' do
+        expect { initiator.write_message('') }.to raise_error(Noise::Exceptions::NoiseHandshakeError)
+        expect { initiator.encrypt('') }.to raise_error(Noise::Exceptions::NoiseHandshakeError)
+      end
+    end
+
+    describe 'a handshake message that fails to decrypt' do
+      let(:name) { 'Noise_NNpsk0_25519_AESGCM_SHA256' }
+
+      before do
+        initiator.psks = [('00' * 32).htb]
+        responder.psks = [('11' * 32).htb]
+        initiator.start_handshake
+        responder.start_handshake
+      end
+
+      # The turn passes before the message is decrypted, so the reader is left ready to write the
+      # fallback handshake message. #fallback depends on this.
+      it 'leaves the reader on the turn it moved to' do
+        expect { responder.read_message(initiator.write_message('')) }
+          .to raise_error(Noise::Exceptions::DecryptError)
+
+        expect(responder.state).to eq :handshake_write
+      end
+    end
+
+    describe '#fallback' do
+      let(:name) { 'Noise_XX_25519_AESGCM_SHA256' }
+      let(:initiator) { Noise::Connection::Initiator.new(name, keypairs: { s: ('11' * 32).htb }) }
+      let(:responder) { Noise::Connection::Responder.new(name, keypairs: { s: ('22' * 32).htb }) }
+
+      before do
+        initiator.start_handshake
+        responder.start_handshake
+        responder.read_message(initiator.write_message(''))
+      end
+
+      # The roles swap, so the party that wrote the aborted message reads the fallback one, and
+      # the party that could not read it writes.
+      it 'keeps the turn each party is already on' do
+        initiator.fallback('Noise_XXfallback_25519_AESGCM_SHA256')
+        responder.fallback('Noise_XXfallback_25519_AESGCM_SHA256')
+
+        expect(initiator.state).to eq :handshake_read
+        expect(responder.state).to eq :handshake_write
+      end
+
+      it 'leaves the running handshake untouched when the fallback name is invalid' do
+        expect { initiator.fallback('Noise_NOSUCHPATTERN_25519_AESGCM_SHA256') }
+          .to raise_error(Noise::Exceptions::ProtocolNameError)
+
+        expect(initiator.state).to eq :handshake_read
+        expect(initiator.protocol.name).to eq name
+      end
+    end
+  end
 end

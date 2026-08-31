@@ -3,8 +3,11 @@
 module Noise
   module Connection
     class Initiator < Base
-      def initialize_next_message
-        @next_message = :write
+      # The initiator writes the first handshake message of the pattern.
+      #
+      # @return [Symbol] the state start_handshake moves this party into.
+      def initial_turn
+        :handshake_write
       end
 
       def initiator?
