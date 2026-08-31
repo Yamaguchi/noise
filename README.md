@@ -251,35 +251,31 @@ protocol that has to hide its message sizes pads them, or encrypts the length as
 Once a connection is framed, stop calling its `encrypt` and `decrypt` directly. A message that
 goes out unframed leaves the reader taking the next message's bytes for a length.
 
-The BOLT #8 transport below reads differently: it is handed an `IO` for each call rather than
-owning one, so it leaves `eof?` to the caller and reports a stream that ends between messages as a
-`TruncatedMessageError` instead of `nil`.
-
 ### Lightning Network (BOLT #8)
 
 BOLT #8 is the transport the Lightning Network runs on: a `Noise_XK_secp256k1_ChaChaPoly_SHA256`
 handshake, then a byte stream in which every message is preceded by its own encrypted length.
-`Noise::Lightning::Transport` owns that framing, so an application only has to run the handshake
-and hand over the finished connection.
+`Noise::Transport::Bolt8` owns that framing, so an application only has to run the handshake and
+hand over the finished connection.
 
 ```
-name = Noise::Lightning::Transport::PROTOCOL_NAME
+name = Noise::Transport::Bolt8::PROTOCOL_NAME
 
 initiator = Noise::Connection::Initiator.new(name, keypairs: { s: local_static, rs: node_id })
-initiator.prologue = Noise::Lightning::Transport::PROLOGUE
+initiator.prologue = Noise::Transport::Bolt8::PROLOGUE
 initiator.start_handshake
 # ... exchange the three handshake messages over the socket ...
 
-transport = Noise::Lightning::Transport.new(initiator)
-socket.write(transport.write("a lightning message"))
-message = transport.read(socket)
+transport = Noise::Transport::Bolt8.new(initiator, socket)
+transport.write("a lightning message")
+message = transport.read
 ```
 
-`#write` returns the bytes to send: the payload length as a two-byte big-endian integer encrypted
-on its own, then the encrypted payload. `#read` takes anything that answers `read(length)`, reads
-the length, and then reads and decrypts that many bytes. It raises `TruncatedMessageError` if the
-stream ends part way through a message, and `DecryptError` if either half fails to authenticate —
-BOLT #8 requires the connection to be closed when that happens.
+It reads and writes exactly as `Framed` does above, `read_timeout:` and the `nil` that means the
+other party closed between messages included. What differs is the framing: the length is encrypted as a
+Noise message of its own rather than sent in the clear, so a watcher cannot tell how long each
+message is. `DecryptError` means the same thing it does there, and BOLT #8 requires the connection
+to be closed when it happens.
 
 Each direction replaces its key with `HKDF(ck, k)` once its nonce reaches 1000, which is every 500
 messages because each message is encrypted twice. This is not the `rekey_encryption` of the Noise
@@ -294,7 +290,7 @@ way to learn that they did. A half-duplex connection is refused outright, since 
 direction a key of its own.
 
 Nothing else in the gem loads this. An application that does not speak Lightning never names
-`Noise::Lightning`, and never pays for it.
+`Noise::Transport::Bolt8`, and never pays for it.
 
 ## Development
 
