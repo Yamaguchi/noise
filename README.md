@@ -206,6 +206,55 @@ application protocol that has to guarantee the turn taking.
 Use it only when the protocol you are implementing calls for it. It is off by default, and a
 one-way pattern refuses it, because such a pattern has no messages to alternate.
 
+### Framing a connection for a socket
+
+`encrypt` and `decrypt` work on whole messages, which is the shape the Noise specification
+describes but not the shape a socket has. `Noise::Transport::Framed` puts a finished connection on
+top of an `IO` by writing each message preceded by its length, so that the reader knows how many
+bytes to take.
+
+```
+transport = Noise::Transport::Framed.new(connection, socket)
+
+transport.write("a message")
+message = transport.read
+```
+
+`read` returns one message, waiting until all of it has arrived however many pieces it comes in.
+It answers `nil` when the stream ends between messages, which is how the other party closes
+without cutting one in half, and raises `TruncatedMessageError` when the stream ends part way
+through one. `write` returns once the whole frame has gone out.
+
+Every failure ends the transport, so build a new connection rather than reading again. A
+`DecryptError` means the frame was not written by the party this connection shares a key with, or
+not in the order it claims. A `TruncatedMessageError` or a `ReadTimeoutError` leaves the bytes
+already taken out of the stream and nowhere to put them, so the next read would take the middle of
+a message for a length. Errors the socket itself raises, such as `Errno::ECONNRESET`, come through
+as they are.
+
+Pass `read_timeout:` in seconds to give up on a message that stops arriving:
+
+```
+transport = Noise::Transport::Framed.new(connection, socket, read_timeout: 30)
+```
+
+The timeout applies to each wait for more bytes rather than to the message as a whole, so a peer
+that sends a byte at a time holds the read open without ever tripping it. It needs a stream that
+answers `wait_readable`, which a socket does and a `StringIO` does not; asking for a timeout on
+one that cannot honour it raises `ArgumentError` rather than dropping it silently.
+
+The length goes out in the clear, as two big-endian bytes. Two are enough because a Noise message
+may not exceed 65535 bytes, and a payload is shorter than that by its authentication tag. The
+length being in the clear means this framing hides nothing about how long each message is; a
+protocol that has to hide its message sizes pads them, or encrypts the length as BOLT #8 does.
+
+Once a connection is framed, stop calling its `encrypt` and `decrypt` directly. A message that
+goes out unframed leaves the reader taking the next message's bytes for a length.
+
+The BOLT #8 transport below reads differently: it is handed an `IO` for each call rather than
+owning one, so it leaves `eof?` to the caller and reports a stream that ends between messages as a
+`TruncatedMessageError` instead of `nil`.
+
 ### Lightning Network (BOLT #8)
 
 BOLT #8 is the transport the Lightning Network runs on: a `Noise_XK_secp256k1_ChaChaPoly_SHA256`

@@ -14,6 +14,8 @@ SimpleCov.start do
   add_filter '/spec/'
 end
 
+Dir[File.join(__dir__, 'support', '*.rb')].each { |support| require support }
+
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
   config.example_status_persistence_file_path = '.rspec_status'
