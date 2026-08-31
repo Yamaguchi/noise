@@ -245,37 +245,57 @@ RSpec.describe Noise::Protocol do
     end
   end
 
+  describe '.create' do
+    # Noise::ProtocolName separates the pattern name from the modifiers, so a name that still has
+    # them attached names no pattern at all.
+    it 'rejects a name no pattern goes by' do
+      expect { Noise::Pattern.create('NNpsk0') }
+        .to raise_error(Noise::Exceptions::ProtocolNameError, 'Unsupported pattern: NNpsk0')
+      expect { Noise::Pattern.create('ZZ') }
+        .to raise_error(Noise::Exceptions::ProtocolNameError, 'Unsupported pattern: ZZ')
+    end
+
+    it 'defaults to a pattern with no modifiers' do
+      expect(Noise::Pattern.create('XX').modifiers).to eq []
+    end
+  end
+
   describe '#apply_pattern_modifiers' do
-    subject { Noise::Pattern.create(name).apply_pattern_modifiers }
+    subject { Noise::Pattern.create(name, [Noise::Modifier::Psk.new(index)]).apply_pattern_modifiers }
 
     # NN has two messages, so psk0 through psk2 are in range.
     context 'psk0' do
-      let(:name) { 'NNpsk0' }
+      let(:name) { 'NN' }
+      let(:index) { 0 }
 
       it { expect { subject }.not_to raise_error }
     end
 
     context 'psk2' do
-      let(:name) { 'NNpsk2' }
+      let(:name) { 'NN' }
+      let(:index) { 2 }
 
       it { expect { subject }.not_to raise_error }
     end
 
     context 'psk3' do
-      let(:name) { 'NNpsk3' }
+      let(:name) { 'NN' }
+      let(:index) { 3 }
 
       it { expect { subject }.to raise_error(Noise::Exceptions::PSKValueError) }
     end
 
     # XK has three messages, so psk3 is the last valid index.
     context 'psk3 on a three message pattern' do
-      let(:name) { 'XKpsk3' }
+      let(:name) { 'XK' }
+      let(:index) { 3 }
 
       it { expect { subject }.not_to raise_error }
     end
 
     context 'psk4 on a three message pattern' do
-      let(:name) { 'XKpsk4' }
+      let(:name) { 'XK' }
+      let(:index) { 4 }
 
       it { expect { subject }.to raise_error(Noise::Exceptions::PSKValueError) }
     end
