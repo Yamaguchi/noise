@@ -3,7 +3,7 @@
 module Noise
   class Protocol
     attr_accessor :cipher_fn, :hash_fn, :dh_fn, :hkdf_fn
-    attr_reader :name, :pattern
+    attr_reader :name, :pattern, :protocol_name
 
     CIPHER = {
       'AESGCM' => Noise::Functions::Cipher::AesGcm,
@@ -24,35 +24,59 @@ module Noise
       'BLAKE3' => Noise::Functions::Hash::Blake3
     }.freeze
 
+    # @param [String] name the protocol name, for example 'Noise_XX_25519_ChaChaPoly_SHA256'.
+    # @raise [Noise::Exceptions::ProtocolNameError] if the name is malformed, or names a pattern
+    #   or a function this gem does not implement.
+    # @raise [Noise::Exceptions::UnsupportedModifierError] if it names a modifier this gem does
+    #   not implement.
+    # @return [Noise::Protocol]
     def self.create(name)
-      parts = name.split('_')
-      raise Noise::Exceptions::ProtocolNameError, "Malformed protocol name: #{name}" unless parts.size == 5
-
-      prefix, pattern_name, dh_name, cipher_name, hash_name = parts
-      raise Noise::Exceptions::ProtocolNameError, "Malformed protocol name: #{name}" if prefix != 'Noise'
-
-      new(name, pattern_name, cipher_name, hash_name, dh_name)
+      new(Noise::ProtocolName.parse(name))
     end
 
-    def initialize(name, pattern_name, cipher_name, hash_name, dh_name)
-      @name = name
-      @pattern = Noise::Pattern.create(pattern_name)
-      @hkdf_fn = Noise::Functions::Hash.create_hkdf_fn(hash_name)
+    # @param [Noise::ProtocolName] protocol_name the parsed name this protocol runs.
+    def initialize(protocol_name)
+      @protocol_name = protocol_name
+      @name = protocol_name.name
+      @pattern = Noise::Pattern.create(protocol_name.pattern_name, protocol_name.modifiers)
+      @hkdf_fn = Noise::Functions::Hash.create_hkdf_fn(protocol_name.hash_name)
       @pattern.apply_pattern_modifiers
 
-      initialize_fn!(cipher_name, hash_name, dh_name)
-    end
-
-    def initialize_fn!(cipher_name, hash_name, dh_name)
-      @cipher_fn = CIPHER[cipher_name]&.new
-      @hash_fn = HASH[hash_name]&.new
-      @dh_fn = DH[dh_name]&.new
-      raise Noise::Exceptions::ProtocolNameError, "Unsupported function in: #{@name}" unless
-        @cipher_fn && @hash_fn && @dh_fn
+      initialize_fn!
     end
 
     def psk?
       @pattern.psk?
+    end
+
+    private
+
+    # Looks the three functions up by the names the protocol name gives them.
+    #
+    # @raise [Noise::Exceptions::ProtocolNameError] if any of the three is one this gem does not
+    #   implement.
+    def initialize_fn!
+      @cipher_fn = CIPHER[@protocol_name.cipher_name]&.new
+      @hash_fn = HASH[@protocol_name.hash_name]&.new
+      @dh_fn = create_dh_fn(@protocol_name.dh_names)
+      raise Noise::Exceptions::ProtocolNameError, "Unsupported function in: #{@name}" unless
+        @cipher_fn && @hash_fn && @dh_fn
+    end
+
+    # A name may list more than one DH function, joined with '+', which is how a hybrid handshake
+    # is written. This gem runs a single DH function, so any name that lists more than one, or
+    # that leaves a member of the list empty, resolves to nothing and is reported as unsupported.
+    #
+    # The hybrid names the Noise extensions define also carry a modifier, hfs, which
+    # Noise::ProtocolName rejects first, so what reaches here today is a name that lists several
+    # DH functions and nothing else.
+    #
+    # @param [Array<String>] names the DH function names the protocol name lists.
+    # @return [Object, nil] the DH function, or nil if the name asks for one this gem lacks.
+    def create_dh_fn(names)
+      return nil unless names.size == 1
+
+      DH[names.first]&.new
     end
   end
 end

@@ -102,14 +102,16 @@ module Noise
   class Pattern
     attr_reader :name, :tokens, :modifiers, :psk_count, :fallback
 
-    NAME_REGEX = /\A([A-Z1]+)([^A-Z]*)\z/
-
-    def self.create(name)
-      matched = NAME_REGEX.match(name)
-      raise Noise::Exceptions::ProtocolNameError, "Malformed pattern name: #{name}" unless matched
-
-      modifiers = matched[2].split('+').map { |s| Modifier.parse(s) }
-      pattern_class(matched[1]).new(modifiers)
+    # Noise::ProtocolName tells a pattern name from the modifiers written after it, so both
+    # arrive here already separated.
+    #
+    # @param [String] name the handshake pattern name on its own, for example 'XX'.
+    # @param [Array<Noise::Modifier::Psk, Noise::Modifier::Fallback>] modifiers the modifiers to
+    #   apply to it. Call #apply_pattern_modifiers to have them rewrite the token list.
+    # @raise [Noise::Exceptions::ProtocolNameError] if no pattern goes by that name.
+    # @return [Noise::Pattern]
+    def self.create(name, modifiers = [])
+      pattern_class(name).new(modifiers)
     end
 
     def self.pattern_class(pattern)
