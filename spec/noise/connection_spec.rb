@@ -445,4 +445,116 @@ RSpec.describe Noise::Connection do
       end
     end
   end
+
+  describe 'half-duplex mode' do
+    let(:name) { 'Noise_NN_25519_AESGCM_SHA256' }
+    let(:initiator) { Noise::Connection::Initiator.new(name, half_duplex: true) }
+    let(:responder) { Noise::Connection::Responder.new(name, half_duplex: true) }
+
+    before do
+      initiator.start_handshake
+      responder.start_handshake
+      responder.read_message(initiator.write_message(''))
+      initiator.read_message(responder.write_message(''))
+    end
+
+    it 'is off unless it is asked for' do
+      expect(Noise::Connection::Initiator.new(name).half_duplex?).to be false
+      expect(initiator.half_duplex?).to be true
+    end
+
+    it 'keeps one CipherState for both directions' do
+      expect(initiator.cipher_state_encrypt).to equal initiator.cipher_state_decrypt
+      expect(responder.cipher_state_encrypt).to equal responder.cipher_state_decrypt
+    end
+
+    it 'gives both parties the first CipherState of the split, not one each' do
+      expect(initiator.cipher_state_encrypt.k).to eq responder.cipher_state_encrypt.k
+    end
+
+    it 'round trips while the parties take turns' do
+      expect(responder.decrypt(initiator.encrypt('first'))).to eq 'first'
+      expect(initiator.decrypt(responder.encrypt('second'))).to eq 'second'
+      expect(responder.decrypt(initiator.encrypt('third'))).to eq 'third'
+    end
+
+    # The shared CipherState carries one nonce, so a message in either direction advances the
+    # count both parties keep.
+    it 'counts the messages of both directions with one nonce' do
+      responder.decrypt(initiator.encrypt('first'))
+
+      expect(initiator.encryption_nonce).to eq 1
+      expect(initiator.decryption_nonce).to eq 1
+    end
+
+    # This is the failure section 11.5 warns about. Both parties still hold nonce 0, so both
+    # messages go out under it, and nothing here reports that. What does surface, one message
+    # later, is that neither party can decrypt what the other sent.
+    it 'lets both parties encrypt under the same nonce when they do not alternate' do
+      expect(initiator.encryption_nonce).to eq 0
+      expect(responder.encryption_nonce).to eq 0
+
+      mine = initiator.encrypt('mine')
+      expect { responder.encrypt('theirs') }.not_to raise_error
+
+      expect { responder.decrypt(mine) }.to raise_error(Noise::Exceptions::DecryptError)
+    end
+
+    # What the nonce reuse costs, made visible. AESGCM encrypts by XORing a keystream that only
+    # the key and the nonce decide, so two messages sent under the same one cancel it out: anyone
+    # who sees both ciphertexts learns the XOR of the two plaintexts without holding any key.
+    it 'lets an observer recover the XOR of two plaintexts sent under the same nonce' do
+      mine = initiator.encrypt('aaaaa')
+      theirs = responder.encrypt('bbbbb')
+
+      expect(mine[0, 5].bytes.zip(theirs[0, 5].bytes).map { |a, b| a ^ b })
+        .to eq('aaaaa'.bytes.zip('bbbbb'.bytes).map { |a, b| a ^ b })
+    end
+  end
+
+  describe 'half-duplex and fallback' do
+    let(:name) { 'Noise_XX_25519_AESGCM_SHA256' }
+    let(:initiator) do
+      Noise::Connection::Initiator.new(name, keypairs: { s: ('11' * 32).htb }, half_duplex: true)
+    end
+    let(:responder) do
+      Noise::Connection::Responder.new(name, keypairs: { s: ('22' * 32).htb }, half_duplex: true)
+    end
+
+    before do
+      initiator.start_handshake
+      responder.start_handshake
+      responder.read_message(initiator.write_message(''))
+    end
+
+    # #fallback replaces the protocol, so the rule that a one-way pattern cannot run half-duplex
+    # has to hold for the pattern being fallen back to as well.
+    it 'refuses to fall back to a one-way pattern' do
+      expect { initiator.fallback('Noise_N_25519_AESGCM_SHA256') }
+        .to raise_error(Noise::Exceptions::NoiseValidationError,
+                        'Noise_N_25519_AESGCM_SHA256 is a one-way pattern, which cannot run half-duplex.')
+
+      expect(initiator.protocol.name).to eq name
+      expect(initiator.state).to eq :handshake_read
+    end
+
+    it 'still falls back to a pattern that alternates' do
+      expect { initiator.fallback('Noise_XXfallback_25519_AESGCM_SHA256') }.not_to raise_error
+      expect(initiator.protocol.name).to eq 'Noise_XXfallback_25519_AESGCM_SHA256'
+    end
+  end
+
+  describe 'half-duplex mode on a one-way pattern' do
+    let(:name) { 'Noise_N_25519_AESGCM_SHA256' }
+
+    it 'is refused, because a one-way pattern never alternates' do
+      expect { Noise::Connection::Initiator.new(name, half_duplex: true) }
+        .to raise_error(Noise::Exceptions::NoiseValidationError,
+                        "#{name} is a one-way pattern, which cannot run half-duplex.")
+    end
+
+    it 'is allowed when it is not asked for' do
+      expect { Noise::Connection::Initiator.new(name) }.not_to raise_error
+    end
+  end
 end
