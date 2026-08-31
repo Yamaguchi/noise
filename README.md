@@ -161,6 +161,26 @@ initiator.rekey_encryption
 responder.rekey_decryption
 ```
 
+### Thread safety
+
+One connection belongs to one thread. A `Noise::Connection` holds its handshake state and its
+transport nonces in plain instance variables and never locks, so two threads that share one
+connection can encrypt two different plaintexts under the same nonce. That is not a small loss for
+either cipher this gem implements: reusing a nonce breaks the confidentiality of both messages and
+lets an attacker forge further ones.
+
+If an application has to reach one connection from more than one thread, it is responsible for
+serialising every call to it.
+
+This is deliberate rather than an omission. A lock inside the connection would make each call
+atomic without making concurrent use correct, because the transport nonce numbers the messages of
+a direction: two threads that both encrypt still produce a stream in an order the receiver cannot
+reconstruct. Only the application knows which message comes first, and deciding that order is
+itself the serialisation the lock cannot supply.
+
+Receiving is no easier. Decrypting a message that arrived out of order is a `decryption_nonce=`
+call followed by a `decrypt` call, and no lock taken one call at a time holds those two together.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
