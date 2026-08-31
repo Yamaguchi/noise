@@ -181,6 +181,31 @@ itself the serialisation the lock cannot supply.
 Receiving is no easier. Decrypting a message that arrived out of order is a `decryption_nonce=`
 call followed by a `decrypt` call, and no lock taken one call at a time holds those two together.
 
+### Half-duplex mode
+
+Section 11.5 of the Noise specification describes protocols in which the two parties strictly take
+turns. Such a protocol may keep a single `CipherState` for both directions instead of one per
+direction, which halves what each party has to store after the handshake. Pass `half_duplex: true`
+to both parties to run that way.
+
+```
+initiator = Noise::Connection::Initiator.new("Noise_NN_25519_ChaChaPoly_SHA256", half_duplex: true)
+responder = Noise::Connection::Responder.new("Noise_NN_25519_ChaChaPoly_SHA256", half_duplex: true)
+```
+
+Because there is one `CipherState`, the methods that name a direction all reach it:
+`encryption_nonce` and `decryption_nonce` report the same count, setting either sets both, and
+`rekey_encryption` and `rekey_decryption` replace the same key.
+
+**The two parties must strictly alternate their transport messages.** They share one nonce, so a
+message in either direction advances the count both of them keep. If both parties encrypt before
+either decrypts, the two messages go out under the same nonce, which breaks the confidentiality of
+both and lets an attacker forge further ones. Nothing in this gem can detect that: it is the
+application protocol that has to guarantee the turn taking.
+
+Use it only when the protocol you are implementing calls for it. It is off by default, and a
+one-way pattern refuses it, because such a pattern has no messages to alternate.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.

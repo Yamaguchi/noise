@@ -72,8 +72,14 @@ module Noise
       #   the keypair given here instead of generating a fresh one, and an ephemeral key reused
       #   across handshakes gives up the forward secrecy every pattern depends on. The handshake
       #   still succeeds, so nothing reports the loss.
-      def initialize(name, keypairs: { s: nil, e: nil, rs: nil, re: nil })
+      # @param [Boolean] half_duplex whether to run the transport phase in half-duplex mode, in
+      #   which one CipherState encrypts both directions. See #half_duplex? for what that costs.
+      # @raise [Noise::Exceptions::NoiseValidationError] if half_duplex is asked for on a one-way
+      #   pattern, which has no messages to alternate.
+      def initialize(name, keypairs: { s: nil, e: nil, rs: nil, re: nil }, half_duplex: false)
         @protocol = Protocol.create(name)
+        @half_duplex = half_duplex
+        validate_half_duplex!
 
         # parameter keypairs[:e] and keypairs[:s] are strings, so should convert Noise::Key object.
         @local_keypairs = {}
@@ -81,6 +87,25 @@ module Noise
         @local_keypairs[:s] = @protocol.dh_fn.class.from_private(keypairs[:s]) if keypairs[:s]
         @remote_keys = { rs: keypairs[:rs], re: keypairs[:re] }
         @state = :created
+      end
+
+      # Whether the transport phase uses one CipherState for both directions, which is the
+      # half-duplex mode of section 11.5 of the Noise specification. Both parties keep the first
+      # CipherState that Split() returns and drop the second.
+      #
+      # It is only safe when the two parties strictly alternate their transport messages. They
+      # share one nonce, so if both encrypt before either decrypts, two different plaintexts go
+      # out under the same nonce, which breaks the confidentiality of both and lets an attacker
+      # forge further ones. Nothing here can check that the application alternates; that is the
+      # application protocol's guarantee to make.
+      #
+      # Because there is one CipherState, the accessors that name a direction all reach it:
+      # #encryption_nonce and #decryption_nonce report the same count, setting either sets both,
+      # and #rekey_encryption and #rekey_decryption replace the same key.
+      #
+      # @return [Boolean]
+      def half_duplex?
+        @half_duplex
       end
 
       # @return [Boolean] true once #start_handshake has been called.
@@ -116,7 +141,9 @@ module Noise
         ensure_state!(*HANDSHAKE_STATES)
 
         turn = @state
-        @protocol = Protocol.create(fallback_name)
+        protocol = Protocol.create(fallback_name)
+        validate_half_duplex!(protocol)
+        @protocol = protocol
         @local_keypairs = { e: @handshake_state.e, s: @handshake_state.s }
         @remote_keys = { re: @handshake_state.re, rs: @handshake_state.rs }
         # Everything that can fail has run by now, so a bad fallback name leaves the connection on
@@ -275,6 +302,36 @@ module Noise
       end
 
       private
+
+      # A one-way pattern gives the responder no way to reply, so its parties never alternate and
+      # half-duplex has nothing to share a CipherState between. Sharing one anyway would hand the
+      # responder an encryption key the pattern is meant to deny it.
+      #
+      # @param [Noise::Protocol] protocol the protocol to check, which is the one being fallen back
+      #   to when #fallback asks.
+      # @raise [Noise::Exceptions::NoiseValidationError]
+      def validate_half_duplex!(protocol = @protocol)
+        return unless @half_duplex && protocol.pattern.one_way?
+
+        raise Noise::Exceptions::NoiseValidationError,
+              "#{protocol.name} is a one-way pattern, which cannot run half-duplex."
+      end
+
+      # The CipherState for the direction this party did not assign c1 to, which is decryption for
+      # the initiator and encryption for the responder.
+      #
+      # Half-duplex answers c1 both ways, so that the two parties encrypt and decrypt under the
+      # same key and nonce as they take turns. A one-way pattern has no second direction at all,
+      # so it has none.
+      #
+      # @param [Noise::State::CipherState] c1 the first CipherState Split() returned.
+      # @param [Noise::State::CipherState] c2 the second one.
+      # @return [Noise::State::CipherState, nil]
+      def other_direction_cipher_state(c1, c2)
+        return c1 if half_duplex?
+
+        @protocol.pattern.one_way? ? nil : c2
+      end
 
       # Returns the transport CipherState of the given direction.
       #
