@@ -96,7 +96,7 @@ it.
 ```
 initiator = Noise::Connection::Initiator.new("Noise_NN_25519_ChaChaPoly_BLAKE2b")
 initiator.prologue = "test" # => "test"
-initiator.start_handshake # => true
+initiator.start_handshake
 cipher = initiator.write_message("") # => "\xB6\xF7gmxi\xAB\xBCY|t\xF0\x9D\x01A\ad\x92\xBBvp\x80ZNU\f=\x83\x81^\xFD\x15"
 ```
 
@@ -110,7 +110,7 @@ The responder responds messages to the initiator.
 ```
 responder = Noise::Connection::Responder.new("Noise_NN_25519_ChaChaPoly_BLAKE2b")
 responder.prologue = "test" # => "test"
-responder.start_handshake # => true
+responder.start_handshake
 plain = responder.read_message(cipher) # => ""
 cipher = responder.write_message("") # => "\v\xD9\x97'\xC0\xB1\xC9\xFFD\x8C\x7F\x18L\xB0\xF2\x14\xB0\x11\xC0\x90\xAAZ\xE1\x03\x17z)\xB81/5L\x16\xE3\xD1\xBE<{\xB8\xBB\xD6\xF1\x00\x10]\x99=\xD7"
 ```

@@ -2,6 +2,18 @@
 
 module Noise
   module Connection
+    # A connection moves through four states, and every public operation is legal in some of them
+    # and not in others:
+    #
+    #   :created         -- start_handshake
+    #   :handshake_write -- write_message, fallback
+    #   :handshake_read  -- read_message, fallback
+    #   :transport       -- encrypt, decrypt, rekey_*, the nonce accessors
+    #
+    # start_handshake moves :created to the state this party starts the pattern in, which is
+    # :handshake_write for the initiator and :handshake_read for the responder. Writing or reading
+    # a handshake message passes the turn to the other party, and the message that completes the
+    # pattern moves the connection to :transport.
     class Base
       # The Noise spec caps a handshake or transport message at 65535 bytes. A transport message is
       # the ciphertext, so the plaintext a caller may hand to encrypt is shorter by the
@@ -9,7 +21,23 @@ module Noise
       MAX_MESSAGE_LENGTH = 65_535
       MAX_PLAINTEXT_LENGTH = MAX_MESSAGE_LENGTH - Noise::State::CipherState::TAG_LENGTH
 
-      attr_reader :protocol, :handshake_started, :handshake_finished, :handshake_hash, :handshake_state,
+      # The states in which the connection is running a handshake, and what it expects next in
+      # each of them. The message explains a HandshakeTurnError.
+      TURN_MESSAGES = {
+        handshake_write: 'This party writes the next handshake message; it cannot read one yet.',
+        handshake_read: 'This party reads the next handshake message; it cannot write one yet.'
+      }.freeze
+      private_constant :TURN_MESSAGES
+
+      # The states in which a handshake is running, which are the ones #fallback may be called in.
+      HANDSHAKE_STATES = TURN_MESSAGES.keys.freeze
+      private_constant :HANDSHAKE_STATES
+
+      # @return [Symbol] the current state, one of :created, :handshake_write, :handshake_read and
+      #   :transport.
+      attr_reader :state
+
+      attr_reader :protocol, :handshake_hash, :handshake_state,
                   :cipher_state_encrypt, :cipher_state_decrypt, :cipher_state_handshake, :s, :rs
       attr_accessor :psks, :prologue
 
@@ -31,29 +59,52 @@ module Noise
         @local_keypairs[:e] = @protocol.dh_fn.class.from_private(keypairs[:e]) if keypairs[:e]
         @local_keypairs[:s] = @protocol.dh_fn.class.from_private(keypairs[:s]) if keypairs[:s]
         @remote_keys = { rs: keypairs[:rs], re: keypairs[:re] }
-        @handshake_started = false
-        @handshake_finished = false
-        initialize_next_message
+        @state = :created
       end
 
+      # @return [Boolean] true once #start_handshake has been called.
+      def handshake_started?
+        @state != :created
+      end
+      alias handshake_started handshake_started?
+
+      # @return [Boolean] true once the last handshake message has been written or read, which is
+      #   when the transport operations become available.
+      def handshake_finished?
+        @state == :transport
+      end
+      alias handshake_finished handshake_finished?
+
+      # Starts the handshake this connection was created for. It is legal once: a connection that
+      # already has a handshake, running or finished, has keys and a transcript that restarting
+      # would silently throw away. #fallback is the supported way to begin a second handshake.
       def start_handshake
+        ensure_state!(:created)
         validate
         initialise_handshake_state
-        @handshake_started = true
+        @state = initial_turn
+        nil
       end
 
       # Restarts the handshake with a fallback pattern, carrying over the keys of the aborted one.
       #
       # The roles swap here: the party that wrote the aborted message now reads, and the one that
-      # failed to read it now writes. Both sides are already in that state, so @next_message is
-      # deliberately left as it is rather than reset through initialize_next_message.
+      # failed to read it now writes. Both sides are already on that turn, so the current turn is
+      # carried over rather than reset to the one this party started the aborted pattern on.
       def fallback(fallback_name)
+        ensure_state!(*HANDSHAKE_STATES)
+
+        turn = @state
         @protocol = Protocol.create(fallback_name)
-        @handshake_started = false
-        @handshake_finished = false
         @local_keypairs = { e: @handshake_state.e, s: @handshake_state.s }
         @remote_keys = { re: @handshake_state.re, rs: @handshake_state.rs }
+        # Everything that can fail has run by now, so a bad fallback name leaves the connection on
+        # the handshake it was already running. start_handshake accepts a connection in :created
+        # alone, so the aborted handshake is cleared here and the turn restored after it.
+        @state = :created
         start_handshake
+        @state = turn
+        nil
       end
 
       def initialise_handshake_state
@@ -69,10 +120,7 @@ module Noise
       end
 
       def write_message(payload = '')
-        # Call NoiseConnection.start_handshake first
-        raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
-        raise Noise::Exceptions::NoiseHandshakeError if @next_message != :write
-        raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
+        ensure_state!(:handshake_write)
 
         length = @handshake_state.expected_message_length(payload.bytesize)
         if length > MAX_MESSAGE_LENGTH
@@ -80,26 +128,27 @@ module Noise
                 "Message would be #{length} bytes, which exceeds the maximum of #{MAX_MESSAGE_LENGTH}."
         end
 
-        @next_message = :read
+        # The turn passes before the message is built, so that a message this party failed to
+        # build still leaves the connection waiting for the other party, as fallback expects.
+        @state = :handshake_read
         buffer = +''
-        @handshake_finished = @handshake_state.write_message(payload, buffer)
+        @state = :transport if @handshake_state.write_message(payload, buffer)
         buffer
       end
 
       def read_message(data)
-        # Call NoiseConnection.start_handshake first
-        raise Noise::Exceptions::NoiseHandshakeError unless @handshake_started
-        raise Noise::Exceptions::NoiseHandshakeError if @next_message != :read
-        raise Noise::Exceptions::NoiseHandshakeError if @handshake_finished
+        ensure_state!(:handshake_read)
 
         if data.bytesize > MAX_MESSAGE_LENGTH
           raise Noise::Exceptions::MessageTooLongError,
                 "Message is #{data.bytesize} bytes, which exceeds the maximum of #{MAX_MESSAGE_LENGTH}."
         end
 
-        @next_message = :write
+        # See #write_message: the turn passes before the message is read, so that a message that
+        # fails to decrypt leaves this party ready to write the fallback handshake message.
+        @state = :handshake_write
         buffer = +''
-        @handshake_finished = @handshake_state.read_message(data, buffer)
+        @state = :transport if @handshake_state.read_message(data, buffer)
         buffer
       end
 
@@ -213,12 +262,42 @@ module Noise
       #
       # @param [Symbol] direction :encrypt or :decrypt.
       def transport_cipher_state(direction)
-        raise Noise::Exceptions::NoiseHandshakeError unless @handshake_finished
+        ensure_state!(:transport)
 
         cipher_state = direction == :encrypt ? @cipher_state_encrypt : @cipher_state_decrypt
         raise Noise::Exceptions::NoiseHandshakeError, "This party cannot #{direction} messages." unless cipher_state
 
         cipher_state
+      end
+
+      # Raises unless the connection is in one of the states the calling operation is legal in.
+      # Every public operation goes through here, so a new one cannot forget its precondition.
+      #
+      # @param [Array<Symbol>] allowed the states the operation may be called in.
+      def ensure_state!(*allowed)
+        return if allowed.include?(@state)
+
+        raise state_error(allowed)
+      end
+
+      # Builds the exception for an operation called in the wrong state. All four descend from
+      # NoiseHandshakeError, so a caller that does not care which one it is can rescue the parent.
+      #
+      # @param [Array<Symbol>] allowed the states the operation may be called in.
+      # @return [Noise::Exceptions::NoiseHandshakeError]
+      def state_error(allowed)
+        case @state
+        when :created
+          Noise::Exceptions::HandshakeNotStartedError.new('The handshake has not started. Call #start_handshake.')
+        when :transport
+          Noise::Exceptions::HandshakeAlreadyFinishedError.new('The handshake has already finished.')
+        else
+          if allowed.include?(:transport)
+            Noise::Exceptions::HandshakeNotFinishedError.new('The handshake has not finished.')
+          else
+            Noise::Exceptions::HandshakeTurnError.new(TURN_MESSAGES.fetch(@state))
+          end
+        end
       end
     end
   end
