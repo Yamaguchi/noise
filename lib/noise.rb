@@ -13,6 +13,7 @@ module Noise
   autoload :Connection, 'noise/connection'
   autoload :Key, 'noise/key'
   autoload :KeyPair, 'noise/key_pair'
+  autoload :Lightning, 'noise/lightning'
   autoload :Protocol, 'noise/protocol'
   autoload :Pattern, 'noise/pattern'
   # Noise::Modifier and Noise::Token are declared in the same file as Noise::Pattern.
