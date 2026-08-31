@@ -292,6 +292,23 @@ direction a key of its own.
 Nothing else in the gem loads this. An application that does not speak Lightning never names
 `Noise::Transport::Bolt8`, and never pays for it.
 
+## Interoperability
+
+The suite checks this gem against the official test vectors in `spec/vectors/`, which are replayed
+transcripts. `interop/` runs the other kind of test: a real handshake, and then a real transport
+exchange, between this gem and [snow](https://github.com/mcginty/snow), the Rust implementation of
+the framework. It covers eighteen patterns against five cipher and hash suites, in both
+directions.
+
+It needs a Rust toolchain, so it is not part of `bundle exec rspec`:
+
+```
+cd interop && cargo build --release && cd ..
+bundle exec rake interop
+```
+
+See [interop/README.md](interop/README.md) for what it covers and what it does not.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
