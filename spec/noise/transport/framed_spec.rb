@@ -21,20 +21,11 @@ RSpec.describe Noise::Transport::Framed do
         .to raise_error(Noise::Exceptions::HandshakeNotFinishedError, 'The handshake has not finished.')
     end
 
-    it 'refuses a negative read timeout' do
-      expect { described_class.new(initiator, StringIO.new, read_timeout: -1) }
-        .to raise_error(ArgumentError, 'read_timeout is -1, which is not a length of time.')
-    end
-
-    # A timeout that cannot be honoured is worse than none, because nothing reports that it was
-    # dropped and the read blocks for as long as the peer stays silent.
-    it 'refuses a read timeout on a stream that cannot be waited on' do
+    # What makes a timeout unusable is Noise::Transport::Stream's to say; this only checks that it
+    # is asked before the transport is handed back.
+    it 'refuses a read timeout the stream cannot honour' do
       expect { described_class.new(initiator, StringIO.new, read_timeout: 1) }
         .to raise_error(ArgumentError, /StringIO, which does not answer #wait_readable/)
-    end
-
-    it 'takes a stream that cannot be waited on when no timeout is asked for' do
-      expect { described_class.new(initiator, StringIO.new) }.not_to raise_error
     end
   end
 
@@ -63,11 +54,6 @@ RSpec.describe Noise::Transport::Framed do
       expect(slow.written.bytesize).to eq written
       # Reading it back is what catches a write that keeps offering the same bytes.
       expect(described_class.new(responder, StringIO.new(slow.written)).read).to eq 'hello'
-    end
-
-    it 'reports a stream that takes none of the bytes it is given' do
-      expect { described_class.new(initiator, ChunkedIO.new(chunk: 0)).write('hello') }
-        .to raise_error(IOError, /took 0 of the 23 bytes/)
     end
   end
 

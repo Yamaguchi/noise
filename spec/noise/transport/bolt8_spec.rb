@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'socket'
 require 'stringio'
 
 using Noise::Utils::HexString
 
-RSpec.describe Noise::Lightning::Transport do
+RSpec.describe Noise::Transport::Bolt8 do
   # The keys of the BOLT #8 handshake test vector, which spec/vectors/lightning.txt also carries.
   let(:initiator_static) { ('11' * 32).htb }
   let(:initiator_ephemeral) { ('12' * 32).htb }
@@ -40,7 +41,7 @@ RSpec.describe Noise::Lightning::Transport do
     it 'refuses a handshake that has not finished' do
       fresh = Noise::Connection::Initiator.new(described_class::PROTOCOL_NAME, keypairs: { rs: node_id })
 
-      expect { described_class.new(fresh) }
+      expect { described_class.new(fresh, StringIO.new) }
         .to raise_error(Noise::Exceptions::HandshakeNotFinishedError, 'The handshake has not finished.')
     end
 
@@ -61,7 +62,7 @@ RSpec.describe Noise::Lightning::Transport do
       half.read_message(peer.write_message(''))
       peer.read_message(half.write_message(''))
 
-      expect { described_class.new(half) }
+      expect { described_class.new(half, StringIO.new) }
         .to raise_error(Noise::Exceptions::NoiseValidationError,
                         'BOLT #8 gives each direction a key of its own, so it cannot run half-duplex.')
     end
@@ -74,7 +75,7 @@ RSpec.describe Noise::Lightning::Transport do
       responder_nn.read_message(other.write_message(''))
       other.read_message(responder_nn.write_message(''))
 
-      expect { described_class.new(other) }
+      expect { described_class.new(other, StringIO.new) }
         .to raise_error(Noise::Exceptions::ProtocolNameError, /BOLT #8 runs #{described_class::PROTOCOL_NAME}/)
     end
   end
@@ -95,25 +96,33 @@ RSpec.describe Noise::Lightning::Transport do
   end
 
   describe '#write and #read' do
-    subject(:transport) { described_class.new(initiator) }
+    subject(:transport) { described_class.new(initiator, frames) }
 
-    let(:peer) { described_class.new(responder) }
+    let(:frames) { StringIO.new(''.b) }
+
+    def peer(io = StringIO.new(frames.string))
+      described_class.new(responder, io)
+    end
 
     it 'frames a message as an encrypted length and an encrypted payload' do
-      frame = transport.write('hello')
+      written = transport.write('hello')
 
-      expect(frame.bytesize).to eq described_class::HEADER_LENGTH + 5 + 16
-      expect(peer.read(StringIO.new(frame))).to eq 'hello'
+      expect(written).to eq described_class::HEADER_LENGTH + 5 + 16
+      expect(frames.string.bytesize).to eq written
+      expect(peer.read).to eq 'hello'
     end
 
     it 'round trips a zero length payload' do
-      expect(peer.read(StringIO.new(transport.write('')))).to eq ''
+      transport.write('')
+
+      expect(peer.read).to eq ''
     end
 
     it 'round trips the longest payload BOLT #8 allows' do
       payload = 'a' * described_class::MAX_PAYLOAD_LENGTH
+      transport.write(payload)
 
-      expect(peer.read(StringIO.new(transport.write(payload)))).to eq payload
+      expect(peer.read).to eq payload
     end
 
     it 'refuses a payload longer than that' do
@@ -122,41 +131,87 @@ RSpec.describe Noise::Lightning::Transport do
     end
 
     it 'reads one message at a time out of a stream that holds several' do
-      stream = StringIO.new(transport.write('one') + transport.write('two') + transport.write('three'))
+      %w[one two three].each { |message| transport.write(message) }
+      receiver = peer
 
-      expect(peer.read(stream)).to eq 'one'
-      expect(peer.read(stream)).to eq 'two'
-      expect(peer.read(stream)).to eq 'three'
+      expect([receiver.read, receiver.read, receiver.read]).to eq %w[one two three]
+    end
+
+    it 'answers nil when the stream ends between messages' do
+      transport.write('hello')
+      receiver = peer
+
+      expect(receiver.read).to eq 'hello'
+      expect(receiver.read).to be_nil
+    end
+
+    it 'reassembles a message that arrives a byte at a time' do
+      transport.write('hello')
+
+      expect(peer(ChunkedIO.new(data: frames.string, chunk: 1)).read).to eq 'hello'
     end
 
     it 'reports a stream that ends inside the header' do
-      expect { peer.read(StringIO.new(transport.write('hello')[0, 10])) }
+      transport.write('hello')
+
+      expect { peer(StringIO.new(frames.string[0, 10])).read }
         .to raise_error(Noise::Exceptions::TruncatedMessageError, 'Needed 18 bytes, the stream ended after 10.')
     end
 
     it 'reports a stream that ends inside the payload' do
-      expect { peer.read(StringIO.new(transport.write('hello')[0, 20])) }
+      transport.write('hello')
+
+      expect { peer(StringIO.new(frames.string[0, 20])).read }
         .to raise_error(Noise::Exceptions::TruncatedMessageError, 'Needed 21 bytes, the stream ended after 2.')
     end
 
     it 'reports a header that fails to authenticate' do
-      frame = transport.write('hello')
-      frame[0] = (frame[0].ord ^ 0xff).chr
+      transport.write('hello')
+      tampered = frames.string.b
+      tampered.setbyte(0, tampered.getbyte(0) ^ 0xff)
 
-      expect { peer.read(StringIO.new(frame)) }.to raise_error(Noise::Exceptions::DecryptError)
+      expect { peer(StringIO.new(tampered)).read }.to raise_error(Noise::Exceptions::DecryptError)
     end
 
     it 'reports a payload that fails to authenticate' do
-      frame = transport.write('hello')
-      tampered = described_class::HEADER_LENGTH
-      frame[tampered] = (frame[tampered].ord ^ 0xff).chr
+      transport.write('hello')
+      tampered = frames.string.b
+      tampered.setbyte(described_class::HEADER_LENGTH, tampered.getbyte(described_class::HEADER_LENGTH) ^ 0xff)
 
-      expect { peer.read(StringIO.new(frame)) }.to raise_error(Noise::Exceptions::DecryptError)
+      expect { peer(StringIO.new(tampered)).read }.to raise_error(Noise::Exceptions::DecryptError)
     end
 
-    it 'works in both directions' do
-      expect(peer.read(StringIO.new(transport.write('to the responder')))).to eq 'to the responder'
-      expect(transport.read(StringIO.new(peer.write('to the initiator')))).to eq 'to the initiator'
+    it 'works in both directions over one socket' do
+      ours, theirs = UNIXSocket.pair
+      us = described_class.new(initiator, ours, read_timeout: 5)
+      them = described_class.new(responder, theirs, read_timeout: 5)
+
+      us.write('to the responder')
+      expect(them.read).to eq 'to the responder'
+      them.write('to the initiator')
+      expect(us.read).to eq 'to the initiator'
+    ensure
+      [ours, theirs].each(&:close)
+    end
+
+    # The header decrypts and announces a payload that never comes, which is the wait a timeout
+    # exists for. That the header was taken, and not merely never read, is what the drained stream
+    # afterwards shows.
+    it 'gives up on a message whose payload stops arriving' do
+      transport.write('hello')
+      reader, writer = IO.pipe
+      writer.write(frames.string.byteslice(0, described_class::HEADER_LENGTH))
+
+      expect { described_class.new(responder, reader, read_timeout: 0.05).read }
+        .to raise_error(Noise::Exceptions::ReadTimeoutError, 'No more of the frame arrived within 0.05 seconds.')
+      expect { reader.read_nonblock(1) }.to raise_error(IO::WaitReadable)
+    ensure
+      [reader, writer].each(&:close)
+    end
+
+    it 'refuses a read timeout the stream cannot honour' do
+      expect { described_class.new(initiator, StringIO.new, read_timeout: 1) }
+        .to raise_error(ArgumentError, /StringIO, which does not answer #wait_readable/)
     end
   end
 
@@ -165,9 +220,9 @@ RSpec.describe Noise::Lightning::Transport do
   #
   # https://github.com/lightning/bolts/blob/master/08-transport.md
   describe 'key rotation' do
-    subject(:transport) { described_class.new(initiator) }
+    subject(:transport) { described_class.new(initiator, frames) }
 
-    let(:peer) { described_class.new(responder) }
+    let(:frames) { StringIO.new(''.b) }
     let(:expected) do
       {
         0 => 'cf2b30ddf0cf3f80e7c35a6e6730b59fe802473180f396d88a8fb0db8cbcf25d2f214cf9ea1d95',
@@ -182,12 +237,14 @@ RSpec.describe Noise::Lightning::Transport do
     it 'matches the BOLT #8 message encryption test vectors' do
       produced = {}
       0.upto(1001) do |index|
-        frame = transport.write('hello')
-        produced[index] = frame.bth if expected.key?(index)
-        expect(peer.read(StringIO.new(frame))).to eq 'hello'
+        before = frames.string.bytesize
+        transport.write('hello')
+        produced[index] = frames.string.byteslice(before..).bth if expected.key?(index)
       end
 
       expect(produced).to eq expected
+      reader = described_class.new(responder, StringIO.new(frames.string))
+      expect(Array.new(1002) { reader.read }.uniq).to eq ['hello']
     end
   end
 end
