@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Noise
-  module Lightning
+  module Transport
     # The BOLT #8 transport layer, which turns the message-oriented Noise::Connection into the
     # byte stream the Lightning Network sends over TCP.
     #
@@ -12,15 +12,15 @@ module Noise
     #
     # Run the handshake with Noise::Connection first, and wrap the finished connection:
     #
-    #   connection = Noise::Connection::Initiator.new(Noise::Lightning::Transport::PROTOCOL_NAME,
+    #   connection = Noise::Connection::Initiator.new(Noise::Transport::Bolt8::PROTOCOL_NAME,
     #                                                 keypairs: { s: local_static, rs: node_id })
-    #   connection.prologue = Noise::Lightning::Transport::PROLOGUE
+    #   connection.prologue = Noise::Transport::Bolt8::PROLOGUE
     #   connection.start_handshake
     #   # ... exchange the three handshake messages over the socket ...
-    #   transport = Noise::Lightning::Transport.new(connection)
+    #   transport = Noise::Transport::Bolt8.new(connection, socket)
     #
-    #   socket.write(transport.write('a lightning message'))
-    #   message = transport.read(socket)
+    #   transport.write('a lightning message')
+    #   message = transport.read
     #
     # The transport takes over the connection's transport phase: it holds the very CipherStates
     # the connection does, so once one is wrapped, stop calling the connection's #encrypt,
@@ -28,7 +28,7 @@ module Noise
     # and the peer has no way to learn that they did.
     #
     # One transport belongs to one thread, for the reason Noise::Connection::Base gives.
-    class Transport
+    class Bolt8
       # BOLT #8 fixes the handshake to this protocol, and this prologue.
       PROTOCOL_NAME = 'Noise_XK_secp256k1_ChaChaPoly_SHA256'
       PROLOGUE = 'lightning'
@@ -45,12 +45,17 @@ module Noise
       MAX_PAYLOAD_LENGTH = 65_535
 
       # @param [Noise::Connection::Base] connection a finished BOLT #8 handshake.
+      # @param [IO] io the stream to read from and write to. See Noise::Transport::Stream.
+      # @param [Numeric, nil] read_timeout how long #read waits for the next bytes of a message
+      #   before giving up, in seconds. See Noise::Transport::Stream.
       # @raise [Noise::Exceptions::HandshakeNotFinishedError] if the handshake has not finished.
       # @raise [Noise::Exceptions::ProtocolNameError] if the connection runs another protocol.
       # @raise [Noise::Exceptions::NoiseValidationError] if the connection is half-duplex.
-      def initialize(connection)
+      # @raise [ArgumentError] if read_timeout is negative, or if the IO cannot be waited on.
+      def initialize(connection, io, read_timeout: nil)
         validate(connection)
 
+        @stream = Stream.new(io, read_timeout: read_timeout)
         hkdf_fn = connection.protocol.hkdf_fn
         # Both directions start from the chaining key the handshake ended with, and rotate away
         # from it independently.
@@ -58,33 +63,41 @@ module Noise
         @receive = Direction.new(connection.cipher_state_decrypt, connection.chaining_key, hkdf_fn)
       end
 
-      # Encrypts one Lightning message.
+      # Encrypts one Lightning message and writes it to the IO: the encrypted length, then the
+      # encrypted payload. It returns once all of it has gone out.
       #
       # @param [String] payload the message, at most MAX_PAYLOAD_LENGTH bytes.
       # @raise [Noise::Exceptions::MessageTooLongError] if the payload is longer than that.
-      # @return [String] the encrypted length followed by the encrypted payload, ready to be
-      #   written to the socket.
+      # @raise [IOError] if the IO accepts none of the bytes it is handed.
+      # @return [Integer] how many bytes were written.
       def write(payload)
         if payload.bytesize > MAX_PAYLOAD_LENGTH
           raise Noise::Exceptions::MessageTooLongError,
                 "Message is #{payload.bytesize} bytes, which exceeds the maximum of #{MAX_PAYLOAD_LENGTH}."
         end
 
-        @send.encrypt([payload.bytesize].pack('n')) + @send.encrypt(payload)
+        @stream.write(@send.encrypt([payload.bytesize].pack('n')) + @send.encrypt(payload))
       end
 
       # Reads one Lightning message, blocking until all of it has arrived.
       #
-      # @param [IO] io the socket, or anything else that answers #read(length).
+      # Every failure ends the transport. BOLT #8 requires the connection to be closed on a
+      # decryption failure, and a message that stops part way through leaves the stream in the
+      # middle of one, where the next read would take a payload for a length.
+      #
+      # An error the IO itself raises, such as Errno::ECONNRESET, comes through as it is.
+      #
       # @raise [Noise::Exceptions::TruncatedMessageError] if the stream ends part way through a
       #   message.
-      # @raise [Noise::Exceptions::DecryptError] if either half fails to authenticate. BOLT #8
-      #   requires the connection to be closed when that happens. Either failure leaves the stream
-      #   part way through a message, so a caller drops the transport rather than reading again.
-      # @return [String] the payload.
-      def read(io)
-        length = @receive.decrypt(read_exactly(io, HEADER_LENGTH)).unpack1('n')
-        @receive.decrypt(read_exactly(io, length + Noise::State::CipherState::TAG_LENGTH))
+      # @raise [Noise::Exceptions::ReadTimeoutError] if no more bytes arrive in time.
+      # @raise [Noise::Exceptions::DecryptError] if either half fails to authenticate.
+      # @return [String, nil] the payload, or nil if the stream ended between messages.
+      def read
+        header = @stream.read_exactly_or_nil(HEADER_LENGTH)
+        return nil if header.nil?
+
+        length = @receive.decrypt(header).unpack1('n')
+        @receive.decrypt(@stream.read_exactly(length + Noise::State::CipherState::TAG_LENGTH))
       end
 
       private
@@ -111,18 +124,6 @@ module Noise
 
         raise Noise::Exceptions::NoiseValidationError,
               'BOLT #8 gives each direction a key of its own, so it cannot run half-duplex.'
-      end
-
-      # @param [IO] io the stream to read from.
-      # @param [Integer] length how many bytes the message needs.
-      # @raise [Noise::Exceptions::TruncatedMessageError] if fewer than that arrive.
-      # @return [String] exactly length bytes.
-      def read_exactly(io, length)
-        data = io.read(length)
-        return data if data && data.bytesize == length
-
-        raise Noise::Exceptions::TruncatedMessageError,
-              "Needed #{length} bytes, the stream ended after #{data ? data.bytesize : 0}."
       end
 
       # One direction of the transport: the key it encrypts or decrypts with, and the chaining key

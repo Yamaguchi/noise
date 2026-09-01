@@ -206,31 +206,76 @@ application protocol that has to guarantee the turn taking.
 Use it only when the protocol you are implementing calls for it. It is off by default, and a
 one-way pattern refuses it, because such a pattern has no messages to alternate.
 
+### Framing a connection for a socket
+
+`encrypt` and `decrypt` work on whole messages, which is the shape the Noise specification
+describes but not the shape a socket has. `Noise::Transport::Framed` puts a finished connection on
+top of an `IO` by writing each message preceded by its length, so that the reader knows how many
+bytes to take.
+
+```
+transport = Noise::Transport::Framed.new(connection, socket)
+
+transport.write("a message")
+message = transport.read
+```
+
+`read` returns one message, waiting until all of it has arrived however many pieces it comes in.
+It answers `nil` when the stream ends between messages, which is how the other party closes
+without cutting one in half, and raises `TruncatedMessageError` when the stream ends part way
+through one. `write` returns once the whole frame has gone out.
+
+Every failure ends the transport, so build a new connection rather than reading again. A
+`DecryptError` means the frame was not written by the party this connection shares a key with, or
+not in the order it claims. A `TruncatedMessageError` or a `ReadTimeoutError` leaves the bytes
+already taken out of the stream and nowhere to put them, so the next read would take the middle of
+a message for a length. Errors the socket itself raises, such as `Errno::ECONNRESET`, come through
+as they are.
+
+Pass `read_timeout:` in seconds to give up on a message that stops arriving:
+
+```
+transport = Noise::Transport::Framed.new(connection, socket, read_timeout: 30)
+```
+
+The timeout applies to each wait for more bytes rather than to the message as a whole, so a peer
+that sends a byte at a time holds the read open without ever tripping it. It needs a stream that
+answers `wait_readable`, which a socket does and a `StringIO` does not; asking for a timeout on
+one that cannot honour it raises `ArgumentError` rather than dropping it silently.
+
+The length goes out in the clear, as two big-endian bytes. Two are enough because a Noise message
+may not exceed 65535 bytes, and a payload is shorter than that by its authentication tag. The
+length being in the clear means this framing hides nothing about how long each message is; a
+protocol that has to hide its message sizes pads them, or encrypts the length as BOLT #8 does.
+
+Once a connection is framed, stop calling its `encrypt` and `decrypt` directly. A message that
+goes out unframed leaves the reader taking the next message's bytes for a length.
+
 ### Lightning Network (BOLT #8)
 
 BOLT #8 is the transport the Lightning Network runs on: a `Noise_XK_secp256k1_ChaChaPoly_SHA256`
 handshake, then a byte stream in which every message is preceded by its own encrypted length.
-`Noise::Lightning::Transport` owns that framing, so an application only has to run the handshake
-and hand over the finished connection.
+`Noise::Transport::Bolt8` owns that framing, so an application only has to run the handshake and
+hand over the finished connection.
 
 ```
-name = Noise::Lightning::Transport::PROTOCOL_NAME
+name = Noise::Transport::Bolt8::PROTOCOL_NAME
 
 initiator = Noise::Connection::Initiator.new(name, keypairs: { s: local_static, rs: node_id })
-initiator.prologue = Noise::Lightning::Transport::PROLOGUE
+initiator.prologue = Noise::Transport::Bolt8::PROLOGUE
 initiator.start_handshake
 # ... exchange the three handshake messages over the socket ...
 
-transport = Noise::Lightning::Transport.new(initiator)
-socket.write(transport.write("a lightning message"))
-message = transport.read(socket)
+transport = Noise::Transport::Bolt8.new(initiator, socket)
+transport.write("a lightning message")
+message = transport.read
 ```
 
-`#write` returns the bytes to send: the payload length as a two-byte big-endian integer encrypted
-on its own, then the encrypted payload. `#read` takes anything that answers `read(length)`, reads
-the length, and then reads and decrypts that many bytes. It raises `TruncatedMessageError` if the
-stream ends part way through a message, and `DecryptError` if either half fails to authenticate —
-BOLT #8 requires the connection to be closed when that happens.
+It reads and writes exactly as `Framed` does above, `read_timeout:` and the `nil` that means the
+other party closed between messages included. What differs is the framing: the length is encrypted as a
+Noise message of its own rather than sent in the clear, so a watcher cannot tell how long each
+message is. `DecryptError` means the same thing it does there, and BOLT #8 requires the connection
+to be closed when it happens.
 
 Each direction replaces its key with `HKDF(ck, k)` once its nonce reaches 1000, which is every 500
 messages because each message is encrypted twice. This is not the `rekey_encryption` of the Noise
@@ -245,7 +290,24 @@ way to learn that they did. A half-duplex connection is refused outright, since 
 direction a key of its own.
 
 Nothing else in the gem loads this. An application that does not speak Lightning never names
-`Noise::Lightning`, and never pays for it.
+`Noise::Transport::Bolt8`, and never pays for it.
+
+## Interoperability
+
+The suite checks this gem against the official test vectors in `spec/vectors/`, which are replayed
+transcripts. `interop/` runs the other kind of test: a real handshake, and then a real transport
+exchange, between this gem and [snow](https://github.com/mcginty/snow), the Rust implementation of
+the framework. It covers eighteen patterns against five cipher and hash suites, in both
+directions.
+
+It needs a Rust toolchain, so it is not part of `bundle exec rspec`:
+
+```
+cd interop && cargo build --release && cd ..
+bundle exec rake interop
+```
+
+See [interop/README.md](interop/README.md) for what it covers and what it does not.
 
 ## Development
 

@@ -13,7 +13,6 @@ module Noise
   autoload :Connection, 'noise/connection'
   autoload :Key, 'noise/key'
   autoload :KeyPair, 'noise/key_pair'
-  autoload :Lightning, 'noise/lightning'
   autoload :Protocol, 'noise/protocol'
   autoload :Pattern, 'noise/pattern'
   # Noise::Modifier and Noise::Token are declared in the same file as Noise::Pattern.
@@ -23,6 +22,7 @@ module Noise
   autoload :Exceptions, 'noise/exceptions'
   autoload :Functions, 'noise/functions'
   autoload :State, 'noise/state'
+  autoload :Transport, 'noise/transport'
 
   # Some DH and hash functions are backed by a gem, and often a system library, that is only needed
   # when the function appears in a protocol name. Loading one is therefore allowed to fail; the

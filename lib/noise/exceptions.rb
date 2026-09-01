@@ -14,6 +14,7 @@ module Noise
     autoload :MessageTooLongError, 'noise/exceptions/message_too_long_error'
     autoload :MissingDependencyError, 'noise/exceptions/missing_dependency_error'
     autoload :ProtocolNameError, 'noise/exceptions/protocol_name_error'
+    autoload :ReadTimeoutError, 'noise/exceptions/read_timeout_error'
     autoload :NoiseHandshakeError, 'noise/exceptions/noise_handshake_error'
     autoload :NoiseValidationError, 'noise/exceptions/noise_validation_error'
     autoload :NoisePSKError, 'noise/exceptions/noise_psk_error'

@@ -1,0 +1,12 @@
+[package]
+name = "noise-interop"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+snow = "0.10"
+
+[[bin]]
+name = "noise-interop"
+path = "src/main.rs"
