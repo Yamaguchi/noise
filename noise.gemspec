@@ -15,8 +15,10 @@ Gem::Specification.new do |spec|
   spec.description   = 'A Ruby implementation of the Noise Protocol framework(http://noiseprotocol.org/).'
   spec.homepage      = 'https://github.com/Yamaguchi/noise'
 
+  # interop/ holds the Rust harness the interoperability suite runs against, which is test
+  # material like spec/ and has no business in the packaged gem.
   spec.files = `git ls-files -z`.split("\x0").reject do |f|
-    f.match(%r{^(test|spec|features)/})
+    f.match(%r{^(test|spec|features|interop)/})
   end
   spec.bindir = 'exe'
   spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
