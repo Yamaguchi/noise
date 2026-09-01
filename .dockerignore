@@ -4,5 +4,6 @@
 .rspec_status
 .ruby-lsp/
 coverage/
+interop/target/
 pkg/
 tmp/

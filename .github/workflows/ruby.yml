@@ -53,3 +53,42 @@ jobs:
       - name: Run tests
         run: bundle exec rspec spec
 
+  interop:
+    runs-on: ubuntu-latest
+    # The suite finishes in seconds. Anything longer means two implementations are waiting on each
+    # other, and a job that hangs until the six hour default helps nobody.
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+
+      - name: Set up Rust
+        id: rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # interop/target holds compiler fingerprints, so the toolchain belongs in the key: a new
+      # stable rustc has to start from a cache of its own rather than rebuild under an old one.
+      - name: Cache the interoperability harness build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            interop/target
+          key: interop-${{ runner.os }}-${{ steps.rust.outputs.cachekey }}-${{ hashFiles('interop/Cargo.lock') }}
+          restore-keys: interop-${{ runner.os }}-${{ steps.rust.outputs.cachekey }}-
+
+      - name: Build the interoperability harness
+        run: cargo build --release --locked
+        working-directory: interop
+
+      # A real handshake against snow, the Rust implementation. See interop/README.md.
+      - name: Run the interoperability suite
+        run: bundle exec rake interop
+
